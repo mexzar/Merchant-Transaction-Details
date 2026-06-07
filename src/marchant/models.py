@@ -1,9 +1,8 @@
 """Normalized, merchant-agnostic data models.
 
 The Amazon-specific scraper maps the upstream `amazon-orders` objects into these
-models so that the rest of the app (export, UI, the future endpoint push) never
-depends on a particular library's shape. When we add more merchants, they map
-into the same models.
+models so that the rest of the app (export, UI) never depends on a particular
+library's shape. When we add more merchants, they map into the same models.
 """
 
 from __future__ import annotations
@@ -57,8 +56,7 @@ class NormalizedOrder(BaseModel):
 class ScrapeResult(BaseModel):
     """The full payload produced by one scrape run.
 
-    This is also the exact shape that gets written to the exported JSON file and,
-    in phase 2, PUT to the configured web endpoint.
+    This is also the exact shape that gets written to the exported JSON file.
     """
 
     merchant: str = "amazon"

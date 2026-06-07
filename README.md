@@ -1,8 +1,8 @@
 # Marchant Transaction Details
 
 Download your Amazon orders and transactions to a tidy JSON file, through a
-local web app on your Mac. Credentials and MFA codes are used only for the
-download and are **never written to disk**.
+local web app on your Mac or Windows PC. Credentials and MFA codes are used
+only for the download and are **never written to disk**.
 
 ## Install (non-technical user)
 
