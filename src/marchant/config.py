@@ -1,0 +1,74 @@
+"""Application configuration and on-disk paths.
+
+We persist only non-sensitive settings (the optional push endpoint and where to
+write exports). Amazon credentials and MFA codes are entered per-run in the UI
+and held in memory only for the duration of a scrape — they are never written to
+disk.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Optional
+
+from platformdirs import user_config_dir, user_documents_dir
+from pydantic import BaseModel
+
+APP_NAME = "MarchantTransactionDetails"
+
+
+class EndpointConfig(BaseModel):
+    """Optional web endpoint that scraped data can be PUT to (phase 2)."""
+
+    enabled: bool = False
+    url: str = ""
+    # Optional header for auth, e.g. {"Authorization": "Bearer ..."}.
+    auth_header_name: str = ""
+    auth_header_value: str = ""
+
+
+class AppConfig(BaseModel):
+    """Top-level persisted settings."""
+
+    endpoint: EndpointConfig = EndpointConfig()
+    # Where exported JSON files are written. Defaults to ~/Documents/<APP_NAME>.
+    export_dir: Optional[str] = None
+
+
+def config_dir() -> Path:
+    path = Path(user_config_dir(APP_NAME, appauthor=False))
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def config_path() -> Path:
+    return config_dir() / "config.json"
+
+
+def default_export_dir() -> Path:
+    return Path(user_documents_dir()) / APP_NAME
+
+
+def export_dir(config: AppConfig) -> Path:
+    path = Path(config.export_dir) if config.export_dir else default_export_dir()
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def load_config() -> AppConfig:
+    path = config_path()
+    if path.exists():
+        try:
+            return AppConfig.model_validate_json(path.read_text(encoding="utf-8"))
+        except (ValueError, json.JSONDecodeError):
+            # Corrupt config — fall back to defaults rather than crashing the app.
+            return AppConfig()
+    return AppConfig()
+
+
+def save_config(config: AppConfig) -> None:
+    config_path().write_text(
+        config.model_dump_json(indent=2),
+        encoding="utf-8",
+    )

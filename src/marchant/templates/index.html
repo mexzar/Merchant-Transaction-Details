@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marchant Transaction Details</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Marchant Transaction Details</h1>
+      <p class="sub">Download your Amazon order &amp; transaction history. <span class="tag">v{{ version }}</span></p>
+    </header>
+
+    <section class="card">
+      <h2>Amazon account</h2>
+      <p class="hint">Credentials are used only for this download and are never saved to disk.</p>
+      <form id="scrape-form">
+        <label>Email
+          <input type="email" name="email" autocomplete="username" required />
+        </label>
+        <label>Password
+          <input type="password" name="password" autocomplete="current-password" required />
+        </label>
+
+        <fieldset class="mfa">
+          <legend>Multi-factor authentication (if enabled)</legend>
+          <label>One-time code (OTP)
+            <input type="text" name="otp" inputmode="numeric" placeholder="e.g. 123456" />
+          </label>
+          <label>or TOTP secret key <span class="muted">(auto-solves MFA)</span>
+            <input type="text" name="otp_secret_key" placeholder="optional" />
+          </label>
+        </fieldset>
+
+        <label>Time range
+          <select name="time_range" id="time_range">
+            {% for r in ranges %}
+            <option value="{{ r.key }}">{{ r.label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label id="year-field" hidden>Year
+          <input type="number" name="year" min="2000" max="2100" placeholder="e.g. 2025" />
+        </label>
+
+        <div class="checks">
+          <label class="inline"><input type="checkbox" name="include_orders" checked /> Orders</label>
+          <label class="inline"><input type="checkbox" name="include_transactions" checked /> Transactions</label>
+          <label class="inline"><input type="checkbox" name="full_details" checked /> Full order details (slower)</label>
+        </div>
+
+        <button type="submit" id="run-btn">Download my data</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary><h2 class="inline-h">Push endpoint <span class="muted">(optional · coming soon)</span></h2></summary>
+        <p class="hint">Configure a web endpoint to PUT this JSON to. Saving the config now is fine; the push step ships in the next phase.</p>
+        <form id="config-form">
+          <label class="inline"><input type="checkbox" name="enabled" {% if config.endpoint.enabled %}checked{% endif %} /> Enable pushing to endpoint</label>
+          <label>Endpoint URL
+            <input type="url" name="url" value="{{ config.endpoint.url }}" placeholder="https://example.com/transactions" />
+          </label>
+          <label>Auth header name <span class="muted">(optional)</span>
+            <input type="text" name="auth_header_name" value="{{ config.endpoint.auth_header_name }}" placeholder="Authorization" />
+          </label>
+          <label>Auth header value <span class="muted">(optional)</span>
+            <input type="text" name="auth_header_value" value="{{ config.endpoint.auth_header_value }}" placeholder="Bearer ..." />
+          </label>
+          <button type="submit" class="secondary">Save endpoint config</button>
+          <span id="config-status" class="status"></span>
+        </form>
+      </details>
+    </section>
+
+    <section class="card" id="status-card" hidden>
+      <h2>Status</h2>
+      <p id="status-msg" class="status"></p>
+      <div id="result" hidden>
+        <p id="counts" class="counts"></p>
+        <a id="download-link" class="button-link" href="#" download>Download JSON</a>
+        <h3>Transactions</h3>
+        <ul id="txn-list" class="summary-list"></ul>
+        <h3>Orders</h3>
+        <ul id="order-list" class="summary-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
