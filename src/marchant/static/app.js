@@ -33,6 +33,59 @@ function renderList(ulId, items, getText) {
   }
 }
 
+// --- Saved accounts (OS keychain) -----------------------------------------
+const savedAccount = $("#saved-account");
+const forgetBtn = $("#forget-btn");
+
+function applySavedAccount() {
+  if (!savedAccount) return;
+  const opt = savedAccount.selectedOptions[0];
+  const form = $("#scrape-form");
+  const hasPassword = opt && opt.dataset.password === "1";
+  const hasOtp = opt && opt.dataset.otp === "1";
+  const email = savedAccount.value;
+
+  form.email.value = email || "";
+  if (form.remember_password) form.remember_password.checked = !!hasPassword;
+  if (form.remember_otp_secret) form.remember_otp_secret.checked = !!hasOtp;
+  // Don't echo stored secrets back into the page; hint that they'll be used.
+  $("#password-hint").hidden = !hasPassword;
+  $("#otp-hint").hidden = !hasOtp;
+  if (hasPassword) form.password.value = "";
+  if (hasOtp) form.otp_secret_key.value = "";
+  if (forgetBtn) forgetBtn.hidden = !email;
+}
+
+if (savedAccount) {
+  savedAccount.addEventListener("change", applySavedAccount);
+  applySavedAccount();
+}
+
+if (forgetBtn) {
+  forgetBtn.addEventListener("click", async () => {
+    const email = savedAccount.value;
+    if (!email) return;
+    const status = $("#forget-status");
+    try {
+      const res = await fetch("/api/accounts/forget", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error("request failed");
+      // Remove the option and reset selection.
+      savedAccount.selectedOptions[0].remove();
+      savedAccount.value = "";
+      applySavedAccount();
+      status.textContent = "Forgotten.";
+      status.className = "status ok";
+    } catch (err) {
+      status.textContent = "Could not forget: " + err.message;
+      status.className = "status err";
+    }
+  });
+}
+
 $("#scrape-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target;
@@ -47,6 +100,8 @@ $("#scrape-form").addEventListener("submit", async (e) => {
     full_details: f.full_details.checked,
     include_orders: f.include_orders.checked,
     include_transactions: f.include_transactions.checked,
+    remember_password: f.remember_password ? f.remember_password.checked : false,
+    remember_otp_secret: f.remember_otp_secret ? f.remember_otp_secret.checked : false,
   };
 
   btn.disabled = true;

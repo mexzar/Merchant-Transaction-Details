@@ -23,6 +23,9 @@ dependencies = [
     # Config / data models.
     "pydantic>=2.6",
     "platformdirs>=4.0",
+    # Secure, cross-platform credential storage (macOS Keychain, Windows
+    # Credential Manager, Linux Secret Service).
+    "keyring>=24.0",
     # Phase 2: pushing to a web endpoint.
     "httpx>=0.27",
 ]

@@ -15,13 +15,34 @@
 
     <section class="card">
       <h2>Amazon account</h2>
-      <p class="hint">Credentials are used only for this download and are never saved to disk.</p>
+      {% if keychain_available %}
+      <p class="hint">Credentials are kept in your OS keychain only if you opt in below. Otherwise they're used just for this download and never saved.</p>
+      {% else %}
+      <p class="hint">Credentials are used only for this download and are never saved. <span class="muted">(No OS keychain detected on this machine, so "remember" options are disabled.)</span></p>
+      {% endif %}
+
+      {% if config.saved_accounts %}
+      <label>Saved account
+        <select id="saved-account">
+          <option value="">— New account —</option>
+          {% for a in config.saved_accounts %}
+          <option value="{{ a.email }}" data-password="{{ 1 if a.store_password else 0 }}" data-otp="{{ 1 if a.store_otp_secret else 0 }}">{{ a.email }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p><button type="button" id="forget-btn" class="secondary" hidden>Forget this account</button> <span id="forget-status" class="status"></span></p>
+      {% endif %}
+
       <form id="scrape-form">
         <label>Email
           <input type="email" name="email" autocomplete="username" required />
         </label>
         <label>Password
-          <input type="password" name="password" autocomplete="current-password" required />
+          <input type="password" name="password" autocomplete="current-password" />
+          <span class="muted" id="password-hint" hidden>Leave blank to use the saved password.</span>
+        </label>
+        <label class="inline" id="remember-password-row" {% if not keychain_available %}hidden{% endif %}>
+          <input type="checkbox" name="remember_password" /> Remember email &amp; password in this device's keychain
         </label>
 
         <fieldset class="mfa">
@@ -31,6 +52,10 @@
           </label>
           <label>or TOTP secret key <span class="muted">(auto-solves MFA)</span>
             <input type="text" name="otp_secret_key" placeholder="optional" />
+            <span class="muted" id="otp-hint" hidden>Leave blank to use the saved TOTP secret.</span>
+          </label>
+          <label class="inline" id="remember-otp-row" {% if not keychain_available %}hidden{% endif %}>
+            <input type="checkbox" name="remember_otp_secret" /> Remember TOTP secret key in this device's keychain
           </label>
         </fieldset>
 
