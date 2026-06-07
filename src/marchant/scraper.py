@@ -216,6 +216,7 @@ def scrape(
         raise ScrapeError("A year is required when the range is 'A specific year'.")
 
     try:
+        from amazonorders.conf import AmazonOrdersConfig
         from amazonorders.orders import AmazonOrders
         from amazonorders.session import AmazonSession
         from amazonorders.transactions import AmazonTransactions
@@ -227,9 +228,22 @@ def scrape(
     spec = TIME_RANGES[time_range]
     range_label = spec["label"] if time_range != "year" else f"Year {year}"
 
+    # Register the Playwright-backed solvers so Amazon's JS-based auth challenges
+    # (ACIC, JS bot-detection, AWS WAF CAPTCHA) get handled in a real browser
+    # rather than raising AmazonOrdersAuthError. Requires the [browser] extra +
+    # `playwright install chromium`.
+    config = AmazonOrdersConfig(data={
+        "auth_forms_classes": [
+            "amazonorders.contrib.browser.playwright.PlaywrightAcicForm",
+            "marchant._browser_forms.VisibleJSAuthForm",
+            "amazonorders.contrib.browser.playwright.PlaywrightManualWafForm",
+        ],
+    })
+
     session = AmazonSession(
         email,
         password,
+        config=config,
         otp_secret_key=otp_secret_key or None,
         io=_build_io(otp),
     )

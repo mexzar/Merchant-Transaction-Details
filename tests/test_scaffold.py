@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 
 from fastapi.testclient import TestClient
 
 from marchant import scraper
-from marchant.config import AppConfig, EndpointConfig
+from marchant.config import AppConfig
 from marchant.exporter import export_filename, to_json, write_export
-from marchant.models import NormalizedOrder, NormalizedTransaction, ScrapeResult
+from marchant.formatter import compose_description, truncate_product_name
+from marchant.models import NormalizedItem, NormalizedOrder, NormalizedTransaction, ScrapeResult
 from marchant.server import app
 
 
@@ -81,10 +83,122 @@ def test_export_roundtrip(tmp_path):
     assert "amazon" in to_json(result)
 
 
+def test_truncate_product_name_drops_after_first_comma():
+    assert truncate_product_name(
+        "ASICS Men's NOVABLAST 5 Running Shoes, 10, Arctic Blue/Aegean Blue"
+    ) == "ASICS Men's NOVABLAST 5 Running Shoes"
+
+
+def test_truncate_product_name_caps_at_word_boundary():
+    out = truncate_product_name(
+        "Brooks Men's Ghost 17 Neutral Running Shoe - Peacoat/Lime/Blue - 10 Medium",
+        max_chars=60,
+    )
+    assert out.endswith("…")
+    # Drops the trailing " -" separator before the ellipsis.
+    assert out == "Brooks Men's Ghost 17 Neutral Running Shoe…"
+
+
+def test_truncate_product_name_passes_through_short_title():
+    assert truncate_product_name("Crayola Dry Erase Marker") == "Crayola Dry Erase Marker"
+
+
+def test_compose_description_multi_item_charge():
+    order = NormalizedOrder(
+        order_number="111-8884051-9545826",
+        items=[
+            NormalizedItem(title="ASICS Men's NOVABLAST 5 Running Shoes, 10, Arctic Blue/Aegean Blue"),
+            NormalizedItem(title="Brooks Men's Ghost 17 Neutral Running Shoe - Peacoat/Lime/Blue - 10 Medium"),
+        ],
+    )
+    txn = NormalizedTransaction(
+        completed_date=date(2026, 6, 4),
+        amount=-372.22,
+        is_refund=False,
+        order_number="111-8884051-9545826",
+    )
+    desc = compose_description(txn, order)
+    assert desc == (
+        "ASICS Men's NOVABLAST 5 Running Shoes; "
+        "Brooks Men's Ghost 17 Neutral Running Shoe… "
+        "- order 111-8884051-9545826"
+    )
+
+
+def test_compose_description_refund_prefixes_return_of():
+    order = NormalizedOrder(
+        order_number="111-3428399-4335447",
+        items=[NormalizedItem(title="kate spade new york Womens Kiya/S Square Sunglasses, Peach, 53mm")],
+    )
+    txn = NormalizedTransaction(
+        completed_date=date(2026, 6, 1),
+        amount=94.95,
+        is_refund=True,
+        order_number="111-3428399-4335447",
+    )
+    desc = compose_description(txn, order)
+    assert desc.startswith("Return of kate spade new york Womens Kiya/S Square Sunglasses")
+    assert desc.endswith("- order 111-3428399-4335447")
+
+
+def test_compose_description_qty_prefix_when_more_than_one():
+    order = NormalizedOrder(
+        order_number="X-1",
+        items=[NormalizedItem(title="Crayola Dry Erase Marker", quantity=3)],
+    )
+    txn = NormalizedTransaction(
+        completed_date=date(2026, 5, 30),
+        amount=-44.97,
+        is_refund=False,
+        order_number="X-1",
+    )
+    assert compose_description(txn, order) == "3x Crayola Dry Erase Marker - order X-1"
+
+
+def test_compose_description_falls_back_to_seller_when_no_order():
+    txn = NormalizedTransaction(
+        completed_date=date(2026, 6, 3),
+        amount=-6.48,
+        is_refund=False,
+        seller="Prime Video TVOD",
+    )
+    # No order, no items → use seller, no trailing order tag.
+    assert compose_description(txn, None) == "Prime Video TVOD"
+
+
+def test_export_slim_shape_has_expected_fields_per_transaction(tmp_path):
+    order = NormalizedOrder(
+        order_number="111-1928049-3306648",
+        items=[NormalizedItem(title="Speedo Unisex-Adult Swim Goggles Mirrored Vanquisher 2.0")],
+    )
+    txn = NormalizedTransaction(
+        completed_date=date(2026, 5, 29),
+        amount=-34.63,
+        is_refund=False,
+        order_number="111-1928049-3306648",
+    )
+    result = ScrapeResult(
+        merchant="amazon",
+        account="a@b.com",
+        generated_at=datetime(2026, 6, 7, 12, 0, 0),
+        transactions=[txn],
+        orders=[order],
+    )
+    payload = json.loads(to_json(result))
+    assert payload["transaction_count"] == 1
+    (entry,) = payload["transactions"]
+    assert set(entry.keys()) == {"merchant", "date", "amount", "description"}
+    assert entry == {
+        "merchant": "Amazon",
+        "date": "2026-05-29",
+        "amount": -34.63,
+        "description": "Speedo Unisex-Adult Swim Goggles Mirrored Vanquisher 2.0 - order 111-1928049-3306648",
+    }
+
+
 def test_config_model_defaults():
     cfg = AppConfig()
-    assert cfg.endpoint == EndpointConfig()
-    assert cfg.endpoint.enabled is False
+    assert cfg.export_dir is None
 
 
 def test_health_endpoint():

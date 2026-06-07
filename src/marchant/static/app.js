@@ -17,22 +17,6 @@ function setStatus(msg, kind) {
   el.className = "status" + (kind ? " " + kind : "");
 }
 
-function renderList(ulId, items, getText) {
-  const ul = $(ulId);
-  ul.innerHTML = "";
-  if (!items || !items.length) {
-    const li = document.createElement("li");
-    li.textContent = "(none)";
-    ul.appendChild(li);
-    return;
-  }
-  for (const it of items) {
-    const li = document.createElement("li");
-    li.textContent = getText(it);
-    ul.appendChild(li);
-  }
-}
-
 // --- Saved accounts (OS keychain) -----------------------------------------
 const savedAccount = $("#saved-account");
 const forgetBtn = $("#forget-btn");
@@ -123,11 +107,10 @@ $("#scrape-form").addEventListener("submit", async (e) => {
     setStatus("Done.", "ok");
     $("#counts").textContent =
       `${r.transaction_count} transaction(s), ${r.order_count} order(s) — ${r.range_label}`;
+    $("#export-path").textContent = data.export_path;
     const dl = $("#download-link");
     dl.href = "/download/" + encodeURIComponent(data.filename);
     dl.textContent = "Download " + data.filename;
-    renderList("#txn-list", r.transactions, (t) => t.summary);
-    renderList("#order-list", r.orders, (o) => o.summary);
     $("#result").hidden = false;
   } catch (err) {
     setStatus("Request failed: " + err.message, "err");
@@ -136,30 +119,21 @@ $("#scrape-form").addEventListener("submit", async (e) => {
   }
 });
 
-$("#config-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const f = e.target;
-  const status = $("#config-status");
-  const payload = {
-    endpoint: {
-      enabled: f.enabled.checked,
-      url: f.url.value.trim(),
-      auth_header_name: f.auth_header_name.value.trim(),
-      auth_header_value: f.auth_header_value.value.trim(),
-    },
-    export_dir: null,
-  };
+$("#copy-path-btn").addEventListener("click", async () => {
+  const path = $("#export-path").textContent;
+  const btn = $("#copy-path-btn");
+  const original = btn.textContent;
   try {
-    const res = await fetch("/api/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error("save failed");
-    status.textContent = "Saved.";
-    status.className = "status ok";
+    await navigator.clipboard.writeText(path);
+    btn.textContent = "Copied!";
   } catch (err) {
-    status.textContent = "Could not save: " + err.message;
-    status.className = "status err";
+    // Fallback: select the text so the user can ⌘C it.
+    const range = document.createRange();
+    range.selectNodeContents($("#export-path"));
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    btn.textContent = "Selected — press ⌘C";
   }
+  setTimeout(() => { btn.textContent = original; }, 1800);
 });
