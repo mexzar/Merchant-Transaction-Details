@@ -6,21 +6,18 @@ only for the download and are **never written to disk**.
 
 ## Install (non-technical user)
 
-You don't need to install Python or anything else first — the installer handles
-it. If your computer doesn't already have a suitable Python, the installer
-quietly downloads a private copy (~45 MB) into the app's own folder. This needs
-**no administrator rights** and changes nothing else on your system; deleting
-the app folder removes it completely.
+**No administrator rights and no separate Python install needed** — download the
+app, double-click the installer for your OS, and you're done. If your computer
+doesn't already have a suitable Python, the installer quietly downloads a private
+copy (~45 MB) into the app's own folder; it changes nothing else on your system,
+and deleting the app folder removes everything.
 
-1. Click the green **Code** button on this GitHub page → **Download ZIP**.
+1. Click the green **Code** button at the top of this page → **Download ZIP**.
 2. Double-click the ZIP to unpack it, then move the folder anywhere you like.
-3. Inside the folder, double-click the installer for your OS:
+3. Double-click the installer for your OS and wait until it says it's done:
    - **macOS:** `install.command`
    - **Windows:** `install.bat`
-
-   A console window opens, sets everything up (Python venv, dependencies,
-   browser), and tells you when it's done.
-4. To start the app, double-click the launcher for your OS:
+4. Double-click the launcher to start the app:
    - **macOS:** `launch.command`
    - **Windows:** `launch.bat`
 
