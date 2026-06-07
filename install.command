@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-click installer for Marchant Transaction Details (macOS).
+# One-click installer for Merchant Transaction Details (macOS).
 # Double-click this file in Finder. A Terminal window opens, sets up the
 # Python virtual environment, installs all dependencies, and downloads the
 # browser used to log in to Amazon. Re-run anytime to refresh.
@@ -14,7 +14,7 @@ PBS_PYVER="3.12.13"
 
 echo
 echo "=========================================="
-echo "  Marchant Transaction Details — installer"
+echo "  Merchant Transaction Details — installer"
 echo "=========================================="
 echo
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the Marchant Transaction Details app.
+# Launch the Merchant Transaction Details app.
 # Double-click in Finder. The web UI opens in your default browser.
 # Quit the app by closing this Terminal window or pressing Ctrl+C.
 
@@ -14,4 +14,4 @@ if [ ! -d ".venv" ]; then
   exit 1
 fi
 
-exec ./.venv/bin/marchant
+exec ./.venv/bin/merchant

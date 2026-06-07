@@ -10,8 +10,8 @@ import pytest
 from keyring.backend import KeyringBackend
 from keyring.errors import PasswordDeleteError
 
-from marchant import credentials
-from marchant.config import AppConfig
+from merchant import credentials
+from merchant.config import AppConfig
 
 
 class InMemoryKeyring(KeyringBackend):

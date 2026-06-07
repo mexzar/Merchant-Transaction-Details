@@ -20,7 +20,7 @@ from .scraper import TIME_RANGES, ScrapeError, scrape
 _PKG_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_PKG_DIR / "templates"))
 
-app = FastAPI(title="Marchant Transaction Details", version=__version__)
+app = FastAPI(title="Merchant Transaction Details", version=__version__)
 app.mount("/static", StaticFiles(directory=str(_PKG_DIR / "static")), name="static")
 
 

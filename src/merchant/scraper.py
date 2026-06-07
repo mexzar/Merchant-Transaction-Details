@@ -235,7 +235,7 @@ def scrape(
     config = AmazonOrdersConfig(data={
         "auth_forms_classes": [
             "amazonorders.contrib.browser.playwright.PlaywrightAcicForm",
-            "marchant._browser_forms.VisibleJSAuthForm",
+            "merchant._browser_forms.VisibleJSAuthForm",
             "amazonorders.contrib.browser.playwright.PlaywrightManualWafForm",
         ],
     })

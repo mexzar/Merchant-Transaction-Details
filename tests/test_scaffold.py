@@ -7,12 +7,12 @@ from datetime import date, datetime
 
 from fastapi.testclient import TestClient
 
-from marchant import scraper
-from marchant.config import AppConfig
-from marchant.exporter import export_filename, to_json, write_export
-from marchant.formatter import compose_description, truncate_product_name
-from marchant.models import NormalizedItem, NormalizedOrder, NormalizedTransaction, ScrapeResult
-from marchant.server import app
+from merchant import scraper
+from merchant.config import AppConfig
+from merchant.exporter import export_filename, to_json, write_export
+from merchant.formatter import compose_description, truncate_product_name
+from merchant.models import NormalizedItem, NormalizedOrder, NormalizedTransaction, ScrapeResult
+from merchant.server import app
 
 
 def test_time_ranges_have_required_keys():
@@ -235,7 +235,7 @@ def test_index_renders():
     client = TestClient(app)
     res = client.get("/")
     assert res.status_code == 200
-    assert "Marchant Transaction Details" in res.text
+    assert "Merchant Transaction Details" in res.text
 
 
 def test_download_rejects_path_traversal():

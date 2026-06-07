@@ -1,5 +1,5 @@
 @echo off
-REM One-click installer for Marchant Transaction Details (Windows).
+REM One-click installer for Merchant Transaction Details (Windows).
 REM Double-click this file in File Explorer. A console window opens, sets up
 REM the Python virtual environment, installs all dependencies, and downloads
 REM the browser used to log in to Amazon. Re-run anytime to refresh.
@@ -15,7 +15,7 @@ set "PBS_PYVER=3.12.13"
 
 echo.
 echo ==========================================
-echo   Marchant Transaction Details - installer
+echo   Merchant Transaction Details - installer
 echo ==========================================
 echo.
 

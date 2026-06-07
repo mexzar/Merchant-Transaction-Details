@@ -1,4 +1,4 @@
-# Marchant Transaction Details
+# Merchant Transaction Details
 
 Download your Amazon orders and transactions to a tidy JSON file, through a
 local web app on your Mac or Windows PC. Credentials and MFA codes are used
@@ -40,7 +40,7 @@ PC" — click **More info → Run anyway**.
    transactions, and full per-order details.
 4. When it finishes, copy the saved path (there's a one-click copy button) or
    click **Download JSON** to grab the file directly. Files are saved to
-   `~/Documents/MarchantTransactionDetails/`.
+   `~/Documents/MerchantTransactionDetails/`.
 
 For accounts with two-step verification (2SV), open the **Advanced
 configuration** section at the bottom. You can either type a one-time code
@@ -110,7 +110,7 @@ store via the [`keyring`](https://github.com/jaraco/keyring) library —
 ## Project layout
 
 ```
-src/marchant/
+src/merchant/
   __main__.py          launcher (uvicorn + open browser, auto-installs Chromium)
   server.py            FastAPI app: UI + /api/scrape + keychain endpoints
   scraper.py           amazon-orders integration -> normalized models
@@ -146,7 +146,7 @@ ruff check .
 The Amazon scraping is powered by
 [`alexdlaird/amazon-orders`](https://github.com/alexdlaird/amazon-orders) — the
 actively maintained, MIT-licensed library with first-class support for orders,
-line items, transactions, and MFA / OTP. Marchant Transaction Details adds a
+line items, transactions, and MFA / OTP. Merchant Transaction Details adds a
 non-technical install path, a local web UI, MFA helpers, and a slim,
 human-readable JSON export on top of it. The evaluation that led to picking
 that library is recorded in

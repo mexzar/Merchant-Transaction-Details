@@ -6,7 +6,7 @@ challenge that requires interaction (a visual puzzle), headless mode times out.
 
 This module is loaded by `amazon-orders` via `auth_forms_classes` (a list of
 dotted-path strings on `AmazonOrdersConfig`). It is *not* imported at top-level
-by the rest of the app, so importing the rest of `marchant` does not require
+by the rest of the app, so importing the rest of `merchant` does not require
 the `[browser]` extra.
 """
 

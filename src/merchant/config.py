@@ -14,7 +14,7 @@ from typing import Optional
 from platformdirs import user_config_dir, user_documents_dir
 from pydantic import BaseModel
 
-APP_NAME = "MarchantTransactionDetails"
+APP_NAME = "MerchantTransactionDetails"
 
 
 class SavedAccount(BaseModel):

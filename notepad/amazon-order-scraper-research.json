@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Amazon Order Scraper — Library Research & Decision",
-  "description": "Notepad recording the evaluation of open-source Amazon order/transaction scrapers and the library chosen to anchor the Marchant-Transaction-Details project.",
-  "project": "Marchant-Transaction-Details",
+  "description": "Notepad recording the evaluation of open-source Amazon order/transaction scrapers and the library chosen to anchor the Merchant-Transaction-Details project.",
+  "project": "Merchant-Transaction-Details",
   "researchDate": "2026-06-07",
   "researchedBy": "daniel.zarzar@gmail.com",
   "goal": "Pick the most active, well-used open-source project to download Amazon order and transaction details (amounts, dates, summaries, full details) from a user's account using their credentials + MFA.",

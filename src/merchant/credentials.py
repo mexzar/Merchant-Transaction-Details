@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-SERVICE = "MarchantTransactionDetails"
+SERVICE = "MerchantTransactionDetails"
 _PASSWORD_SUFFIX = ":password"
 _OTP_SUFFIX = ":otp_secret"
 

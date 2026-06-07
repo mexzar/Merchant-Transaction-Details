@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 echo
 echo "=========================================="
-echo "  Marchant Transaction Details — updater"
+echo "  Merchant Transaction Details — updater"
 echo "=========================================="
 echo
 

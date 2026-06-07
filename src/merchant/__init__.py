@@ -1,4 +1,4 @@
-"""Marchant Transaction Details.
+"""Merchant Transaction Details.
 
 Download order and transaction details from well-known merchants (starting with
 Amazon) to a tidy JSON file.

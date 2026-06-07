@@ -1,5 +1,5 @@
 @echo off
-REM Launch the Marchant Transaction Details app (Windows).
+REM Launch the Merchant Transaction Details app (Windows).
 REM Double-click in File Explorer. The web UI opens in your default browser.
 REM Quit the app by closing this console window or pressing Ctrl+C.
 
@@ -14,4 +14,4 @@ if not exist ".venv" (
     exit /b 1
 )
 
-".venv\Scripts\marchant.exe"
+".venv\Scripts\merchant.exe"
