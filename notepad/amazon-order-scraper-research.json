@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Amazon Order Scraper — Library Research & Decision",
+  "description": "Notepad recording the evaluation of open-source Amazon order/transaction scrapers and the library chosen to anchor the Marchant-Transaction-Details project.",
+  "project": "Marchant-Transaction-Details",
+  "researchDate": "2026-06-07",
+  "researchedBy": "daniel.zarzar@gmail.com",
+  "goal": "Pick the most active, well-used open-source project to download Amazon order and transaction details (amounts, dates, summaries, full details) from a user's account using their credentials + MFA.",
+  "requirements": [
+    "Authenticate with user-supplied Amazon username/password",
+    "Support MFA / OTP / two-step verification prompts",
+    "Retrieve transaction amounts and transaction dates",
+    "Retrieve a nicely formatted summary and full order details",
+    "Usable as an embeddable library (not just a browser extension)",
+    "Actively maintained and reasonably widely used",
+    "Permissive open-source license suitable for redistribution"
+  ],
+  "candidates": [
+    {
+      "name": "amazon-orders",
+      "author": "alexdlaird",
+      "url": "https://github.com/alexdlaird/amazon-orders",
+      "pypi": "https://pypi.org/project/amazon-orders/",
+      "docs": "https://amazon-orders.readthedocs.io/",
+      "language": "Python",
+      "type": "library + CLI",
+      "license": "MIT",
+      "latestRelease": "4.3.0",
+      "latestReleaseDate": "2026-06-07",
+      "approxStars": 149,
+      "activity": "very active (CI-tested, frequent releases, current as of research date)",
+      "supportsMfaOtp": true,
+      "supportsTransactions": true,
+      "supportsFullDetails": true,
+      "keyClasses": ["AmazonSession", "AmazonOrders", "AmazonTransactions", "AmazonOrdersConfig"],
+      "cliCommands": [
+        "amazon-orders login",
+        "amazon-orders history --year <YEAR>",
+        "amazon-orders history --days 30",
+        "amazon-orders transactions"
+      ],
+      "notes": [
+        "Parses Amazon's English (.com) consumer site; other locales not officially supported.",
+        "MFA via interactive OTP prompt or automated TOTP using AMAZON_OTP_SECRET_KEY env var.",
+        "Handles Amazon WAF / captcha challenges.",
+        "full_details=True fetches per-order line items at the cost of one extra request per order."
+      ],
+      "fitScore": 10,
+      "selected": true
+    },
+    {
+      "name": "azad",
+      "author": "philipmulcahy",
+      "url": "https://github.com/philipmulcahy/azad",
+      "language": "TypeScript/JavaScript",
+      "type": "Chrome browser extension",
+      "license": "Apache-2.0",
+      "activity": "active and popular",
+      "supportsMfaOtp": "N/A (uses the user's already-logged-in browser session)",
+      "supportsTransactions": true,
+      "selected": false,
+      "rejectionReason": "Browser extension, not an embeddable library for an installable PC app; can't be driven headlessly from our own UI."
+    },
+    {
+      "name": "Amazon-Order-History",
+      "author": "MaX-Lo",
+      "url": "https://github.com/MaX-Lo/Amazon-Order-History",
+      "language": "Python",
+      "type": "script/scraper",
+      "activity": "stale",
+      "selected": false,
+      "rejectionReason": "Targets amazon.de only; lower activity; no robust MFA handling."
+    },
+    {
+      "name": "amzscraper",
+      "author": "tobiasmcnulty",
+      "url": "https://github.com/tobiasmcnulty/amzscraper",
+      "language": "Python (Selenium)",
+      "type": "script",
+      "activity": "low",
+      "selected": false,
+      "rejectionReason": "Selenium-based, generates receipt PDFs; no structured transaction model, brittle, heavier dependency footprint."
+    },
+    {
+      "name": "amazon_order_history_scraper",
+      "author": "drewdaemon",
+      "url": "https://github.com/drewdaemon/amazon_order_history_scraper",
+      "language": "Python",
+      "type": "script",
+      "activity": "low",
+      "selected": false,
+      "rejectionReason": "Basic CSV export; no transactions API, no MFA, not maintained as a library."
+    },
+    {
+      "name": "Amazon-Scraper",
+      "author": "Chrisso",
+      "url": "https://github.com/Chrisso/Amazon-Scraper",
+      "language": "Python",
+      "type": "script",
+      "activity": "low",
+      "selected": false,
+      "rejectionReason": "amazon.de focused; limited scope."
+    },
+    {
+      "name": "LLM-Scraper",
+      "author": "safffrron",
+      "url": "https://github.com/safffrron/LLM-Scraper",
+      "language": "Python (Selenium + LLM)",
+      "type": "script",
+      "activity": "low",
+      "selected": false,
+      "rejectionReason": "Relies on an LLM + Selenium to interpret pages; expensive, slow, and brittle for a packaged consumer app."
+    }
+  ],
+  "decision": {
+    "selectedLibrary": "amazon-orders",
+    "selectedAuthor": "alexdlaird",
+    "selectedUrl": "https://github.com/alexdlaird/amazon-orders",
+    "pinnedVersion": ">=4.3.0,<5.0.0",
+    "license": "MIT",
+    "rationale": [
+      "Most actively maintained candidate with a release dated the day of this research.",
+      "First-class, structured support for both orders (with line items / full details) and transactions (amounts + dates) — exactly the data we need.",
+      "Native MFA/OTP support (interactive prompt and automated TOTP secret), which is a hard requirement.",
+      "Clean Python library API plus a CLI, so it embeds directly into our installable PC app and headless flows.",
+      "MIT license permits redistribution inside our application.",
+      "Pure-HTTP parsing (no Selenium/browser) keeps the install small and easy to package for a PC."
+    ],
+    "risks": [
+      "Unofficial scraper — may break when Amazon changes site structure; mitigate by pinning a version and tracking upstream releases.",
+      "Officially supports only the English amazon.com locale.",
+      "Amazon WAF/captcha challenges may require user interaction on some logins."
+    ]
+  },
+  "deliverables": {
+    "phase1": [
+      "Record library research + decision in this JSON notepad",
+      "Scaffold an installable Python app with a simple UI (credentials, MFA, endpoint config)",
+      "Integrate amazon-orders to download orders + transactions and export a formatted JSON file",
+      "Run end-to-end locally"
+    ],
+    "phase2_deferred": [
+      "Optional HTTP PUT of the exported transaction JSON to a user-configured web endpoint"
+    ]
+  }
+}
