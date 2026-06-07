@@ -272,6 +272,20 @@ def scrape(
             txns_api = AmazonTransactions(session)
             raw_txns = txns_api.get_transactions(days=int(spec["days"]))
             result.transactions = [_map_transaction(t) for t in raw_txns]
+
+        if include_orders and include_transactions:
+            # Transactions can post for orders placed just outside the order time
+            # window (Amazon's "Last 3 months" filter ≠ the 90-day txn window).
+            # Fetch those one-by-one so descriptions get product names instead
+            # of falling back to the generic "AMZN Mktp US" descriptor.
+            known = {o.order_number for o in result.orders if o.order_number}
+            referenced = {t.order_number for t in result.transactions if t.order_number}
+            for order_id in sorted(referenced - known):
+                try:
+                    extra = orders_api.get_order(order_id)
+                except Exception:  # noqa: BLE001
+                    continue
+                result.orders.append(_map_order(extra))
     except Exception as exc:  # noqa: BLE001
         raise ScrapeError(f"Failed while downloading data: {exc}") from exc
     finally:

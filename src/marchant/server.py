@@ -32,9 +32,6 @@ class ScrapeRequest(BaseModel):
     otp_secret_key: Optional[str] = None
     time_range: str = "months-3"
     year: Optional[int] = None
-    full_details: bool = True
-    include_orders: bool = True
-    include_transactions: bool = True
     # Independent opt-ins for remembering secrets on this device.
     remember_password: bool = False
     remember_otp_secret: bool = False
@@ -80,9 +77,6 @@ def forget_account(req: ForgetRequest) -> dict:
 
 @app.post("/api/scrape")
 def run_scrape(req: ScrapeRequest) -> JSONResponse:
-    if not req.include_orders and not req.include_transactions:
-        raise HTTPException(status_code=400, detail="Select orders, transactions, or both.")
-
     email = (req.email or "").strip()
     # Fall back to keychain-stored secrets when the field is left blank.
     password = req.password or credentials.get_password(email)
@@ -96,9 +90,6 @@ def run_scrape(req: ScrapeRequest) -> JSONResponse:
             otp_secret_key=otp_secret_key,
             time_range=req.time_range,
             year=req.year,
-            full_details=req.full_details,
-            include_orders=req.include_orders,
-            include_transactions=req.include_transactions,
         )
     except ScrapeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

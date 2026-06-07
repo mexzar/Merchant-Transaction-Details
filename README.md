@@ -43,7 +43,8 @@ PC" — click **More info → Run anyway**.
 
 1. Enter your Amazon **email** and **password**.
 2. Pick a **time range**.
-3. Tick **Orders**, **Transactions**, or both, and click **Download my data**.
+3. Click **Download my data**. Every run pulls the same dataset: orders,
+   transactions, and full per-order details.
 4. When it finishes, copy the saved path (there's a one-click copy button) or
    click **Download JSON** to grab the file directly. Files are saved to
    `~/Documents/MarchantTransactionDetails/`.

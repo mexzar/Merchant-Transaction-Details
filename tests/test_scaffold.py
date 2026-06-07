@@ -166,6 +166,29 @@ def test_compose_description_falls_back_to_seller_when_no_order():
     assert compose_description(txn, None) == "Prime Video TVOD"
 
 
+def test_compose_description_skips_generic_amzn_descriptor():
+    # Order wasn't backfilled (e.g. get_order failed) so we have only the
+    # statement seller "AMZN Mktp US". That string is bank-noise, not a
+    # product name — the description should fall through to "Order <number>".
+    charge = NormalizedTransaction(
+        completed_date=date(2026, 5, 30),
+        amount=-101.42,
+        is_refund=False,
+        order_number="111-7595432-9412208",
+        seller="AMZN Mktp US",
+    )
+    assert compose_description(charge, None) == "Order 111-7595432-9412208"
+
+    refund = NormalizedTransaction(
+        completed_date=date(2026, 6, 1),
+        amount=10.81,
+        is_refund=True,
+        order_number="111-7595432-9412208",
+        seller="AMZN Mktp US",
+    )
+    assert compose_description(refund, None) == "Refund on order 111-7595432-9412208"
+
+
 def test_export_slim_shape_has_expected_fields_per_transaction(tmp_path):
     order = NormalizedOrder(
         order_number="111-1928049-3306648",
@@ -213,20 +236,6 @@ def test_index_renders():
     res = client.get("/")
     assert res.status_code == 200
     assert "Marchant Transaction Details" in res.text
-
-
-def test_scrape_endpoint_validates_empty_selection():
-    client = TestClient(app)
-    res = client.post(
-        "/api/scrape",
-        json={
-            "email": "a@b.com",
-            "password": "pw",
-            "include_orders": False,
-            "include_transactions": False,
-        },
-    )
-    assert res.status_code == 400
 
 
 def test_download_rejects_path_traversal():

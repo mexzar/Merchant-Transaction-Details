@@ -81,9 +81,6 @@ $("#scrape-form").addEventListener("submit", async (e) => {
     otp_secret_key: f.otp_secret_key.value.trim() || null,
     time_range: f.time_range.value,
     year: f.year.value ? parseInt(f.year.value, 10) : null,
-    full_details: f.full_details.checked,
-    include_orders: f.include_orders.checked,
-    include_transactions: f.include_transactions.checked,
     remember_password: f.remember_password ? f.remember_password.checked : false,
     remember_otp_secret: f.remember_otp_secret ? f.remember_otp_secret.checked : false,
   };

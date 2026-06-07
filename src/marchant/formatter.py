@@ -32,6 +32,14 @@ def _format_item(item: NormalizedItem, max_chars: int) -> str:
     return name
 
 
+def _is_generic_amazon_descriptor(seller: str) -> bool:
+    # "AMZN Mktp US", "AMZN Digital*ABC123", "Amazon.com*XYZ" — bank-card
+    # descriptors Amazon uses on the statement view. Not a product name and
+    # not a useful seller, so we'd rather show the order number alone.
+    upper = seller.upper()
+    return upper.startswith("AMZN ") or upper.startswith("AMAZON.COM*")
+
+
 def compose_description(
     transaction: NormalizedTransaction,
     order: Optional[NormalizedOrder] = None,
@@ -45,9 +53,20 @@ def compose_description(
     """
     items = list(order.items) if order else []
     parts = [p for p in (_format_item(i, max_chars_per_product) for i in items) if p]
-    body = "; ".join(parts) if parts else (transaction.seller or "(unknown)")
-    if transaction.is_refund:
+
+    if parts:
+        body = "; ".join(parts)
+    else:
+        seller = (transaction.seller or "").strip()
+        body = seller if seller and not _is_generic_amazon_descriptor(seller) else ""
+
+    if body and transaction.is_refund:
         body = f"Return of {body}"
-    if transaction.order_number:
+
+    if body and transaction.order_number:
         return f"{body} - order {transaction.order_number}"
-    return body
+    if body:
+        return body
+    if transaction.order_number:
+        return f"{'Refund on order' if transaction.is_refund else 'Order'} {transaction.order_number}"
+    return "(unknown)"
