@@ -28,12 +28,53 @@ class EndpointConfig(BaseModel):
     auth_header_value: str = ""
 
 
+class SavedAccount(BaseModel):
+    """Non-secret record of an account whose secrets are in the OS keychain.
+
+    The actual password / TOTP secret live in the keychain (see credentials.py);
+    these flags only tell the UI what was remembered so it can offer the account.
+    """
+
+    email: str
+    store_password: bool = False
+    store_otp_secret: bool = False
+
+
 class AppConfig(BaseModel):
     """Top-level persisted settings."""
 
     endpoint: EndpointConfig = EndpointConfig()
     # Where exported JSON files are written. Defaults to ~/Documents/<APP_NAME>.
     export_dir: Optional[str] = None
+    # Accounts with secrets remembered in the OS keychain.
+    saved_accounts: list[SavedAccount] = []
+
+    def find_account(self, email: str) -> Optional[SavedAccount]:
+        for acct in self.saved_accounts:
+            if acct.email == email:
+                return acct
+        return None
+
+    def upsert_account(self, email: str, *, store_password: bool, store_otp_secret: bool) -> None:
+        acct = self.find_account(email)
+        if acct is None:
+            self.saved_accounts.append(
+                SavedAccount(
+                    email=email,
+                    store_password=store_password,
+                    store_otp_secret=store_otp_secret,
+                )
+            )
+        else:
+            acct.store_password = store_password
+            acct.store_otp_secret = store_otp_secret
+        # Drop accounts that no longer remember anything.
+        self.saved_accounts = [
+            a for a in self.saved_accounts if a.store_password or a.store_otp_secret
+        ]
+
+    def remove_account(self, email: str) -> None:
+        self.saved_accounts = [a for a in self.saved_accounts if a.email != email]
 
 
 def config_dir() -> Path:

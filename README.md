@@ -8,8 +8,35 @@ You enter your credentials, handle MFA if prompted, pick a time range, and the
 app downloads your orders and transactions and writes them to a tidy JSON file
 with both a one-line summary and the full details for each entry.
 
-> Credentials and MFA codes are used only for the download and are **never**
-> written to disk.
+> By default, credentials and MFA codes are used only for the download and are
+> **never** written to disk. You can optionally opt in to remembering them in
+> your **OS keychain** (see below).
+
+## Remembering credentials (optional)
+
+You can opt in to saving your Amazon password and/or TOTP secret on the device.
+Secrets are stored in the operating system's encrypted credential store via the
+[`keyring`](https://github.com/jaraco/keyring) library — **never** in a file:
+
+| OS | Backend |
+|---|---|
+| macOS | Keychain |
+| Windows | Credential Manager (Credential Locker) |
+| Linux | Secret Service (GNOME Keyring / KWallet) |
+
+- The **password** and the **TOTP secret key** have **separate** opt-ins, so you
+  can remember one without the other.
+- A saved-account picker prefills your email and pulls the secrets from the
+  keychain at run time; **Forget this account** removes them.
+- Only non-secret bookkeeping (which emails were remembered) lives in
+  `config.json`; the secrets themselves stay in the keychain.
+- If no OS keychain is available (e.g. some headless Linux setups), the
+  "remember" options are hidden automatically and the app runs without saving.
+
+> **Security note:** remembering the **TOTP secret** means this device holds both
+> your password and your second factor. The keychain encrypts it at rest and
+> gates it behind your OS login, but it does reduce what 2FA buys you if the
+> machine is compromised — hence the separate, explicit opt-in.
 
 ## How it works
 
@@ -89,7 +116,8 @@ src/marchant/
   server.py       # FastAPI app: UI + /api/scrape, /api/config, /download
   scraper.py      # amazon-orders integration -> normalized models
   models.py       # merchant-agnostic data models
-  config.py       # persisted settings + paths
+  config.py       # persisted settings + paths + saved-account bookkeeping
+  credentials.py  # OS-keychain credential storage (keyring)
   exporter.py     # write/serialize the JSON export
   pusher.py       # phase 2: PUT to endpoint (scaffolded)
   templates/ static/   # the local web UI
