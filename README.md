@@ -6,15 +6,11 @@ only for the download and are **never written to disk**.
 
 ## Install (non-technical user)
 
-You need Python 3.9 or newer.
-
-- **macOS** ships Python; if you hit an error saying it's missing, install the
-  latest from <https://www.python.org/downloads/macos/>.
-- **Windows** does not ship Python — install it from
-  <https://www.python.org/downloads/windows/> first, and **tick "Add python.exe
-  to PATH"** during install.
-
-Then:
+You don't need to install Python or anything else first — the installer handles
+it. If your computer doesn't already have a suitable Python, the installer
+quietly downloads a private copy (~45 MB) into the app's own folder. This needs
+**no administrator rights** and changes nothing else on your system; deleting
+the app folder removes it completely.
 
 1. Click the green **Code** button on this GitHub page → **Download ZIP**.
 2. Double-click the ZIP to unpack it, then move the folder anywhere you like.

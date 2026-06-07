@@ -8,6 +8,8 @@ dist/
 .venv/
 venv/
 env/
+# Bundled standalone Python fetched by the installer when none is on the system
+.python/
 
 # Tooling
 .pytest_cache/
