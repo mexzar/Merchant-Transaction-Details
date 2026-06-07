@@ -19,6 +19,7 @@ htmlcov/
 # App data / secrets — never commit credentials or scraped data
 *.session
 exports/
+output/
 *.local.json
 .env
 

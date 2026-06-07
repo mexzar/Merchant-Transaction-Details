@@ -1,9 +1,8 @@
 """Application configuration and on-disk paths.
 
-We persist only non-sensitive settings (the optional push endpoint and where to
-write exports). Amazon credentials and MFA codes are entered per-run in the UI
-and held in memory only for the duration of a scrape — they are never written to
-disk.
+We persist only non-sensitive settings (where to write exports). Amazon
+credentials and MFA codes are entered per-run in the UI and held in memory only
+for the duration of a scrape — they are never written to disk.
 """
 
 from __future__ import annotations
@@ -16,16 +15,6 @@ from platformdirs import user_config_dir, user_documents_dir
 from pydantic import BaseModel
 
 APP_NAME = "MarchantTransactionDetails"
-
-
-class EndpointConfig(BaseModel):
-    """Optional web endpoint that scraped data can be PUT to (phase 2)."""
-
-    enabled: bool = False
-    url: str = ""
-    # Optional header for auth, e.g. {"Authorization": "Bearer ..."}.
-    auth_header_name: str = ""
-    auth_header_value: str = ""
 
 
 class SavedAccount(BaseModel):
@@ -43,7 +32,6 @@ class SavedAccount(BaseModel):
 class AppConfig(BaseModel):
     """Top-level persisted settings."""
 
-    endpoint: EndpointConfig = EndpointConfig()
     # Where exported JSON files are written. Defaults to ~/Documents/<APP_NAME>.
     export_dir: Optional[str] = None
     # Accounts with secrets remembered in the OS keychain.

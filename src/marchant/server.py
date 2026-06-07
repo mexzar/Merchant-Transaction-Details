@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from starlette.requests import Request
 
 from . import __version__, credentials
-from .config import AppConfig, export_dir, load_config, save_config
+from .config import export_dir, load_config, save_config
 from .exporter import write_export
 from .scraper import TIME_RANGES, ScrapeError, scrape
 
@@ -78,17 +78,6 @@ def forget_account(req: ForgetRequest) -> dict:
     return {"forgotten": req.email}
 
 
-@app.get("/api/config")
-def get_config() -> AppConfig:
-    return load_config()
-
-
-@app.post("/api/config")
-def update_config(payload: AppConfig) -> AppConfig:
-    save_config(payload)
-    return payload
-
-
 @app.post("/api/scrape")
 def run_scrape(req: ScrapeRequest) -> JSONResponse:
     if not req.include_orders and not req.include_transactions:
@@ -141,6 +130,7 @@ def run_scrape(req: ScrapeRequest) -> JSONResponse:
             "result": result.model_dump(mode="json"),
             "filename": out_path.name,
             "export_path": str(out_path),
+            "export_dir": str(out_path.parent),
         }
     )
 
