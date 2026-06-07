@@ -119,7 +119,7 @@ def test_compose_description_multi_item_charge():
     )
     desc = compose_description(txn, order)
     assert desc == (
-        "ASICS Men's NOVABLAST 5 Running Shoes; "
+        "ASICS Men's NOVABLAST 5 Running Shoes\n"
         "Brooks Men's Ghost 17 Neutral Running Shoe… "
         "- order 111-8884051-9545826"
     )

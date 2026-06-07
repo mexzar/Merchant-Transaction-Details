@@ -101,7 +101,7 @@ store via the [`keyring`](https://github.com/jaraco/keyring) library —
       "merchant": "Amazon",
       "date": "2026-06-01",
       "amount": 16.23,
-      "description": "Return of 24 Pack Mini Slime; Cheerland Flower Party… - order 111-1554910-8678669"
+      "description": "Return of 24 Pack Mini Slime\nCheerland Flower Party… - order 111-1554910-8678669"
     }
   ]
 }
@@ -110,8 +110,9 @@ store via the [`keyring`](https://github.com/jaraco/keyring) library —
 - `merchant` is the display name of the source merchant; future merchants will
   use the same per-transaction field so downstream tools can route by it.
 - `amount` is negative for charges and positive for refunds.
-- `description` is `"[Return of ]Product A; Product B; … - order <number>"`.
-  Product names are truncated to 60 characters at word boundaries.
+- `description` lists one product per line, `"[Return of ]Product A\nProduct B\n… - order <number>"`
+  (the trailing `- order <number>` rides the last product line). Product names
+  are truncated to 60 characters at word boundaries.
 
 ## Project layout
 

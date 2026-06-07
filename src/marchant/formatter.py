@@ -46,16 +46,19 @@ def compose_description(
     *,
     max_chars_per_product: int = 60,
 ) -> str:
-    """Build a description like `Product A; 2x Product B - order 111-…`.
+    """Build a description listing each product on its own line, e.g.
+    `Product A\n2x Product B - order 111-…`.
 
-    Refunds get a `Return of ` prefix. Transactions with no order number (e.g.
-    Prime Video) fall back to the seller name and drop the trailing order tag.
+    Multiple products are separated by newlines so a long order reads as a
+    one-product-per-line list rather than one run-on string. Refunds get a
+    `Return of ` prefix. Transactions with no order number (e.g. Prime Video)
+    fall back to the seller name and drop the trailing order tag.
     """
     items = list(order.items) if order else []
     parts = [p for p in (_format_item(i, max_chars_per_product) for i in items) if p]
 
     if parts:
-        body = "; ".join(parts)
+        body = "\n".join(parts)
     else:
         seller = (transaction.seller or "").strip()
         body = seller if seller and not _is_generic_amazon_descriptor(seller) else ""
