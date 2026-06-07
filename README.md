@@ -4,7 +4,7 @@ Download your Amazon orders and transactions to a tidy JSON file, through a
 local web app on your Mac or Windows PC. Credentials and MFA codes are used
 only for the download and are **never written to disk**.
 
-## Install (non-technical user)
+## Install
 
 **No administrator rights and no separate Python install needed** — download the
 app, double-click the installer for your OS, and you're done. If your computer
