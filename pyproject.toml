@@ -16,7 +16,7 @@ dependencies = [
     # Amazon order/transaction scraping (chosen library — see notepad/).
     # The [browser] extra pulls in Playwright; we need it for Amazon's JS auth
     # challenge. Chromium itself is downloaded on first run via __main__.
-    "amazon-orders[browser]>=4.3.0,<5.0.0",
+    "amazon-orders[browser]>=4.4.0,<5.0.0",
     # Local web UI.
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",

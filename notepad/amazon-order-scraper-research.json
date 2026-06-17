@@ -25,8 +25,8 @@
       "language": "Python",
       "type": "library + CLI",
       "license": "MIT",
-      "latestRelease": "4.3.0",
-      "latestReleaseDate": "2026-06-07",
+      "latestRelease": "4.4.0",
+      "latestReleaseDate": "2026-06-12",
       "approxStars": 149,
       "activity": "very active (CI-tested, frequent releases, current as of research date)",
       "supportsMfaOtp": true,
@@ -42,7 +42,7 @@
       "notes": [
         "Parses Amazon's English (.com) consumer site; other locales not officially supported.",
         "MFA via interactive OTP prompt or automated TOTP using AMAZON_OTP_SECRET_KEY env var.",
-        "Handles Amazon WAF / captcha challenges.",
+        "Handles Amazon WAF / captcha challenges; 4.4.0 added a browser_timeout config key (default 30s) controlling waits for browser challenge elements.",
         "full_details=True fetches per-order line items at the cost of one extra request per order."
       ],
       "fitScore": 10,
@@ -116,7 +116,7 @@
     "selectedLibrary": "amazon-orders",
     "selectedAuthor": "alexdlaird",
     "selectedUrl": "https://github.com/alexdlaird/amazon-orders",
-    "pinnedVersion": ">=4.3.0,<5.0.0",
+    "pinnedVersion": ">=4.4.0,<5.0.0",
     "license": "MIT",
     "rationale": [
       "Most actively maintained candidate with a release dated the day of this research.",
@@ -130,6 +130,24 @@
       "Unofficial scraper — may break when Amazon changes site structure; mitigate by pinning a version and tracking upstream releases.",
       "Officially supports only the English amazon.com locale.",
       "Amazon WAF/captcha challenges may require user interaction on some logins."
+    ],
+    "upstreamUpdates": [
+      {
+        "date": "2026-06-17",
+        "from": "4.3.0",
+        "to": "4.4.0",
+        "by": "daniel.zarzar@gmail.com",
+        "changesIntegrated": [
+          "Bumped the dependency floor to amazon-orders[browser]>=4.4.0,<5.0.0.",
+          "Set the new browser_timeout config key to 180s so the visible manual-solve auth forms (VisibleJSAuthForm, PlaywrightManualWafForm) don't time out the 30s default while a human solves a challenge.",
+          "Reviewed 4.3.1/4.4.0 changelog: payment_method_last_4 on transactions (added 4.3.0) is already mapped; PlaywrightAcicForm now auto-solves visual grid puzzles when a WAF solver extra is configured (no change needed — we ship no solver extra and fall back to manual solving)."
+        ],
+        "notIntegrated": [
+          "AmazonTransactions.get_transactions(order_id=...) server-side filter (4.3.1) — our cross-reference flow backfills orders for out-of-window transactions instead; no behavior change needed.",
+          "AmazonOrders.get_invoice() (4.3.1) — not needed for our JSON export."
+        ],
+        "verification": "Installed 4.4.0 and ran the full test suite: 24 passed."
+      }
     ]
   },
   "deliverables": {

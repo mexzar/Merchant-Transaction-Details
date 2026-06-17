@@ -232,12 +232,18 @@ def scrape(
     # (ACIC, JS bot-detection, AWS WAF CAPTCHA) get handled in a real browser
     # rather than raising AmazonOrdersAuthError. Requires the [browser] extra +
     # `playwright install chromium`.
+    #
+    # Two of these forms (VisibleJSAuthForm, PlaywrightManualWafForm) open a
+    # visible window and wait for the user to solve a challenge by hand. The
+    # upstream `browser_timeout` (added in amazon-orders 4.4.0) defaults to 30s,
+    # which is too short for a human; bump it so manual solving doesn't time out.
     config = AmazonOrdersConfig(data={
         "auth_forms_classes": [
             "amazonorders.contrib.browser.playwright.PlaywrightAcicForm",
             "merchant._browser_forms.VisibleJSAuthForm",
             "amazonorders.contrib.browser.playwright.PlaywrightManualWafForm",
         ],
+        "browser_timeout": 180,
     })
 
     session = AmazonSession(
