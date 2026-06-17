@@ -148,7 +148,19 @@
         ],
         "verification": "Installed 4.4.0 and ran the full test suite: 24 passed."
       }
-    ]
+    ],
+    "wafSolverDecision": {
+      "date": "2026-06-17",
+      "decision": "Do NOT add an automated WAF/CAPTCHA solver extra to the shipped app.",
+      "context": "amazon-orders 4.4.0 can auto-solve AWS WAF challenges (including visual grid puzzles) when a third-party solver extra is configured. It ships three: amazon-orders[capsolver] (CAPSOLVER_API_KEY), amazon-orders[2captcha] (TWOCAPTCHA_API_KEY), and amazon-orders[anticaptcha] (ANTICAPTCHA_API_KEY). Each is a paid, pay-per-solve commercial service requiring per-user signup and an API key.",
+      "rationale": [
+        "Breaks the app's no-setup, double-click, privacy-focused pitch: each user would have to register with a captcha company, fund a balance, and paste an API key.",
+        "Privacy: solving sends the challenge context to a third party, at odds with our 'credentials/MFA never written to disk' stance.",
+        "Redundant: we already ship a free manual fallback (VisibleJSAuthForm / PlaywrightManualWafForm) that opens a visible browser window for the present user to solve the challenge — the right UX for an interactive desktop app.",
+        "Automated solvers earn their cost/complexity only for unattended/headless runs, which this app is not."
+      ],
+      "revisitIf": "We add a headless/unattended/server mode where no human is present to solve challenges."
+    }
   },
   "deliverables": {
     "phase1": [
