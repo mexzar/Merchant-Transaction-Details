@@ -90,7 +90,6 @@ such name, so there it is always the order number.
 | Read the tab you click in (`activeTab`, `scripting`) | To read Amazon in that tab. Only when you click the button, only that tab, and not after it leaves the page. The extension has no standing access to Amazon. |
 | Storage (`storage`) | To keep the result in memory until you click Done. |
 | piggybanksonline.com | To hand the result to the import page in the tab **Send** opened. Chrome describes this as access to piggybanksonline.com; the extension's script runs only on the import page, and does nothing there unless **Send** opened it. |
-| Piggy Banks test site (optional) | Only if you turn on **Send to the Piggy Banks test site** in Settings. Your browser asks first. While it is on, **Send** goes to the test site and the popup says so; turn it off to send to piggybanksonline.com. |
 
 ## Limits
 

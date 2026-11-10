@@ -10,7 +10,6 @@
   const $ = (id) => document.getElementById(id);
 
   const ORDERS_URL = 'https://www.amazon.com/your-orders/orders';
-  const TEST_ORIGINS = [`${D.TEST_ORIGIN}/*`];
   // The extension reads Amazon in the background of the tab, so a sign-in or
   // CAPTCHA page it meets is not on screen: reloading the tab brings it up.
   const ERRORS = {
@@ -85,7 +84,6 @@
         $('notice').hidden = s.notice !== 'unreachable';
         $('notice').textContent =
           "Couldn't reach the Piggy Banks import page. Sign in to Piggy Banks in that tab, then click Send to Piggy Banks again.";
-        $('target-note').hidden = !$('test-site').checked;
         $('send-button').disabled = !m.count;
         return show('ready');
       }
@@ -135,18 +133,6 @@
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
-  // The test-site setting is the optional permission itself: granted means
-  // Send goes to the test site. The background reacts to the change, so it
-  // holds even if the browser's prompt closes this popup.
-  async function setTestSite(on) {
-    if (on) {
-      $('test-site').checked = await chrome.permissions.request({ origins: TEST_ORIGINS });
-    } else {
-      await chrome.permissions.remove({ origins: TEST_ORIGINS }).catch(() => {});
-    }
-    render(current);
-  }
-
   // One click, one tab: the send buttons stay off until the state comes back.
   const SEND_BUTTONS = ['send-button', 'resend-button', 'send-again-button'];
   async function send() {
@@ -171,13 +157,10 @@
     discard();
     render(current);
   });
-  $('test-site').addEventListener('change', (e) => setTestSite(e.target.checked));
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'session' && changes.state) render(changes.state.newValue);
   });
-
-  $('test-site').checked = await chrome.permissions.contains({ origins: TEST_ORIGINS });
 
   const stored = await chrome.storage.session.get('state');
   render(stored.state);

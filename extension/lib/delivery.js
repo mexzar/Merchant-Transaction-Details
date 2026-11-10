@@ -18,9 +18,9 @@
   // The canonical Piggy Banks site. piggybanks.online is an alias whose pages
   // send the browser on to this one before the app loads, so the import page
   // only ever runs here.
-  const PRODUCTION_ORIGINS = ['https://piggybanksonline.com'];
-  const TEST_ORIGIN = 'https://jolly-ground-01e69fe0f.7.azurestaticapps.net';
+  const PIGGY_BANKS_ORIGIN = 'https://piggybanksonline.com';
   const IMPORT_PATH = '/import-details';
+  const IMPORT_URL = PIGGY_BANKS_ORIGIN + IMPORT_PATH;
   const AMAZON_ORIGIN = 'https://www.amazon.com';
 
   // What the popup injects into the Amazon tab, in order.
@@ -56,7 +56,7 @@
       error: null,
       exportText: null,
       summary: null, // { count, rangeLabel, ordersNeeded, ordersFound, stopped, paymentsCut }
-      delivery: null, // { id, tabId, startedAt, target }
+      delivery: null, // { id, tabId, startedAt }
       notice: null, // 'unreachable' after a send that heard nothing
     };
   }
@@ -69,25 +69,20 @@
     }
   }
 
-  function importUrl(target) {
-    return (target === 'test' ? TEST_ORIGIN : PRODUCTION_ORIGINS[0]) + IMPORT_PATH;
-  }
-
   /** The origin a message came from: the frame's own, else its URL's. */
   function senderOrigin(sender) {
     return sender.origin || originOf(sender.url);
   }
 
   /**
-   * True for a page on the Piggy Banks site a delivery was sent to. The
-   * origin, not the path: the import page's content script is injected only
-   * on /import-details, but the app may have moved the tab elsewhere since
-   * (a signed-out visitor is sent to the landing page), and the handshake is
-   * what tells the import page apart.
+   * True for a page on the Piggy Banks site. The origin, not the path: the
+   * import page's content script is injected only on /import-details, but
+   * the app may have moved the tab elsewhere since (a signed-out visitor is
+   * sent to the landing page), and the handshake is what tells the import
+   * page apart.
    */
-  function isPiggyBanks(sender, target) {
-    const origin = senderOrigin(sender);
-    return target === 'test' ? origin === TEST_ORIGIN : PRODUCTION_ORIGINS.includes(origin);
+  function isPiggyBanks(sender) {
+    return senderOrigin(sender) === PIGGY_BANKS_ORIGIN;
   }
 
   /** The top frame of the tab the current read runs in, on Amazon, for that read. */
@@ -106,14 +101,14 @@
   /**
    * What the import page in `sender` gets when it asks for the export: the
    * export and the delivery's id, or null. Only the tab "Send" opened, only
-   * its top frame, only on the Piggy Banks site it was sent to, only while
-   * sending, and only for a while.
+   * its top frame, only on the Piggy Banks site, only while sending, and
+   * only for a while.
    */
   function claim(state, sender, now) {
     const d = state.delivery;
     if (state.phase !== 'sending' || !d || !state.exportText) return null;
     if (!sender.tab || sender.tab.id !== d.tabId || sender.frameId !== 0) return null;
-    if (!isPiggyBanks(sender, d.target)) return null;
+    if (!isPiggyBanks(sender)) return null;
     if (now - d.startedAt > DELIVERY_WINDOW_MS) return null;
     return { deliveryId: d.id, payload: state.exportText };
   }
@@ -129,16 +124,15 @@
   }
 
   MTD.delivery = {
-    PRODUCTION_ORIGINS,
-    TEST_ORIGIN,
+    PIGGY_BANKS_ORIGIN,
     IMPORT_PATH,
+    IMPORT_URL,
     AMAZON_ORIGIN,
     READER_FILES,
     MAX_EXPORT_BYTES,
     RANGES,
     rangeFor,
     initialState,
-    importUrl,
     isPiggyBanks,
     isReaderSender,
     claim,

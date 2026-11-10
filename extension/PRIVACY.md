@@ -18,8 +18,7 @@ no analytics, and loads no code from anywhere.
 **Discard**. It stays after sending so you can send it again if the import
 page could not load your account. Closing the browser clears it. The
 extension writes nothing to disk except a file you save with **Save as a
-file**; the test-site setting is your browser's own record of the permission
-you gave.
+file**.
 
 **What it does not take.** Your Amazon password (it never sees it). From the
 pages it opens it takes only the fields above, not the card, names or

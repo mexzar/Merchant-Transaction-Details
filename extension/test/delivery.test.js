@@ -9,7 +9,7 @@ function sending(overrides = {}) {
     ...D.initialState(),
     phase: 'sending',
     exportText: '{"transactions":[]}',
-    delivery: { id: 'd-1', tabId: 7, startedAt: NOW - 1000, target: 'production' },
+    delivery: { id: 'd-1', tabId: 7, startedAt: NOW - 1000 },
     ...overrides,
   };
 }
@@ -36,14 +36,6 @@ describe('claim', () => {
     expect(D.claim(sending(), { ...importPage, frameId: 3 }, NOW)).toBeNull();
     expect(D.claim(sending(), { ...importPage, origin: 'https://evil.example', url: 'https://evil.example/import-details' }, NOW)).toBeNull();
     expect(D.claim(sending(), { ...importPage, tab: undefined }, NOW)).toBeNull();
-  });
-
-  it('gives nothing to the test site unless that is where it was sent', () => {
-    const test = { ...importPage, origin: D.TEST_ORIGIN, url: `${D.TEST_ORIGIN}/import-details` };
-    expect(D.claim(sending(), test, NOW)).toBeNull();
-    const toTest = sending({ delivery: { id: 'd-2', tabId: 7, startedAt: NOW, target: 'test' } });
-    expect(D.claim(toTest, test, NOW)).toEqual({ deliveryId: 'd-2', payload: '{"transactions":[]}' });
-    expect(D.claim(toTest, importPage, NOW)).toBeNull();
   });
 
   it('gives nothing when not sending, or long after Send', () => {
@@ -90,9 +82,8 @@ describe('rangeFor', () => {
   });
 });
 
-describe('importUrl', () => {
-  it('sends to production unless the test site was chosen', () => {
-    expect(D.importUrl('production')).toBe('https://piggybanksonline.com/import-details');
-    expect(D.importUrl('test')).toBe(`${D.TEST_ORIGIN}/import-details`);
+describe('IMPORT_URL', () => {
+  it('is the import page on the canonical Piggy Banks site', () => {
+    expect(D.IMPORT_URL).toBe('https://piggybanksonline.com/import-details');
   });
 });

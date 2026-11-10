@@ -23,7 +23,6 @@
     "service_worker": "background.js"
   },
   "permissions": ["activeTab", "scripting", "storage"],
-  "optional_host_permissions": ["https://jolly-ground-01e69fe0f.7.azurestaticapps.net/*"],
   "content_scripts": [
     {
       "matches": ["https://piggybanksonline.com/import-details*"],

@@ -10,7 +10,6 @@ importScripts('lib/delivery.js');
 
 const D = self.MTD.delivery;
 const KEY = 'state';
-const TEST_SCRIPT_ID = 'piggybanks-test-site';
 // How long after a read starts before a reader that does not answer counts
 // as gone (the popup may still be injecting it). A check that comes sooner
 // waits out the rest.
@@ -141,16 +140,14 @@ function cancelDelivery(s) {
  * Open the import page in a new tab and wait for it to ask. Always a new
  * tab: an earlier one may since be showing something else.
  */
-async function startDelivery() {
-  const toTest = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
-  const site = toTest ? 'test' : 'production';
+function startDelivery() {
   return update(async (s) => {
     if (!['ready', 'sending', 'sent'].includes(s.phase) || !s.exportText) return false;
-    const tab = await chrome.tabs.create({ url: D.importUrl(site), active: true });
+    const tab = await chrome.tabs.create({ url: D.IMPORT_URL, active: true });
     cancelDelivery(s);
     s.phase = 'sending';
     s.notice = null;
-    s.delivery = { id: crypto.randomUUID(), tabId: tab.id, startedAt: Date.now(), target: site };
+    s.delivery = { id: crypto.randomUUID(), tabId: tab.id, startedAt: Date.now() };
     return true;
   });
 }
@@ -202,29 +199,3 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
   });
 });
-
-// The test site is opt-in (Settings in the popup): its permission is
-// optional, its content script is registered only while it is granted, and
-// while it is granted, Send goes there.
-async function syncTestSiteScript() {
-  const granted = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
-  const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [TEST_SCRIPT_ID] });
-  if (granted && !existing.length) {
-    await chrome.scripting.registerContentScripts([
-      {
-        id: TEST_SCRIPT_ID,
-        matches: [`${D.TEST_ORIGIN}${D.IMPORT_PATH}*`],
-        js: ['lib/handoff.js', 'content/piggybanks.js'],
-        runAt: 'document_idle',
-        persistAcrossSessions: true,
-      },
-    ]);
-  } else if (!granted && existing.length) {
-    await chrome.scripting.unregisterContentScripts({ ids: [TEST_SCRIPT_ID] });
-  }
-}
-
-chrome.permissions.onAdded.addListener(() => syncTestSiteScript().catch(() => {}));
-chrome.permissions.onRemoved.addListener(() => syncTestSiteScript().catch(() => {}));
-chrome.runtime.onInstalled.addListener(() => syncTestSiteScript().catch(() => {}));
-chrome.runtime.onStartup.addListener(() => syncTestSiteScript().catch(() => {}));
