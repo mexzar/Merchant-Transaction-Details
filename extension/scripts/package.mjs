@@ -1,7 +1,9 @@
 // Packs the extension for a store upload or a manual install:
-// `npm run package` writes dist/merchant-transaction-details-<version>.zip
-// with only the files the browser loads (no tests, tooling or node_modules).
-// No dependencies: a minimal ZIP writer over node:zlib.
+// `npm run package` writes dist/merchant-transaction-details.zip with only
+// the files the browser loads (no tests, tooling or node_modules). The name
+// carries no version, so the README's "latest release" download link keeps
+// working from release to release; the version is in manifest.json and the
+// release's tag. No dependencies: a minimal ZIP writer over node:zlib.
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,6 +87,6 @@ const entries = SHIPPED.flatMap((p) => filesUnder(join(ROOT, p))).map((file) => 
   data: readFileSync(file),
 }));
 mkdirSync(join(ROOT, 'dist'), { recursive: true });
-const out = join(ROOT, 'dist', `merchant-transaction-details-${version}.zip`);
+const out = join(ROOT, 'dist', 'merchant-transaction-details.zip');
 writeFileSync(out, zip(entries));
-console.log(`${relative(ROOT, out)}: ${entries.length} files`);
+console.log(`${relative(ROOT, out)}: version ${version}, ${entries.length} files`);
