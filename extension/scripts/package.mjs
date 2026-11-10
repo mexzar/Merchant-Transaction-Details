@@ -4,9 +4,10 @@
 // No dependencies: a minimal ZIP writer over node:zlib.
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SHIPPED = ['manifest.json', 'background.js', 'lib', 'content', 'popup', 'icons'];
 
 function filesUnder(path) {

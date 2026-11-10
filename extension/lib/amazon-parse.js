@@ -34,12 +34,13 @@
 
   /**
    * Text sellers and Amazon wrote, on one line, without control or invisible
-   * formatting characters (zero-width, bidi controls), which have no place in
-   * a note.
+   * formatting characters (zero-width, bidi controls), blank-looking filler
+   * letters (Hangul fillers, the braille blank) or private-use characters,
+   * none of which has a place in a note.
    */
   function clean(value) {
     return String(value)
-      .replace(/[\p{Cf}\u2028\u2029]/gu, '')
+      .replace(/[\p{Cf}\p{Co}\u2028\u2029\u115f\u1160\u2800\u3164\uffa0]/gu, '')
       .replace(/[\p{Cc}\s]+/gu, ' ')
       .trim();
   }
@@ -232,7 +233,10 @@
           orderNumber = orderNumberIn(cell.textContent);
           if (orderNumber) break;
         }
-        transactions.push({ date, amount, orderNumber, seller: sellerName(sellerAfterOrderLink(line)) });
+        // No seller here: this page has no named field for it, only a line
+        // found by position, and a changed layout must never turn some other
+        // line (a card, a name) into a note.
+        transactions.push({ date, amount, orderNumber, seller: '' });
       }
     }
     if (rows && !transactions.length) return null;
@@ -249,31 +253,24 @@
     return { transactions, next };
   }
 
-  // A payment card: "Visa ****1234", "•••• 1234", "ending in 1234".
+  // Anything that could be part of a card or account number: four or more
+  // digits in a row (spaces or hyphens between them allowed), masked digits
+  // ("****1234", "•••• 1234", "... 1234", "…1234"), "ending (in|with) 1234",
+  // or a card brand.
   const CARD_LIKE =
-    /(?:[*•·xX]{2,}|ending in)\s*\d{2,4}|\b(?:visa|master ?card|amex|american express|discover|debit card|credit card)\b/i;
+    /\d(?:[ -]?\d){3,}|(?:[*•·●xX.]{2,}|…|\bending(?: in| with)?)\s*\d|\b(?:visa|master ?card|amex|american express|discover|debit|credit card)\b/i;
 
   /**
-   * The name Amazon shows for a charge ("Prime Video Channels"), or '' for
-   * anything that is not one: an order number, something that looks like a
-   * payment card (the older page finds this line by position, so a changed
-   * layout must never turn a card into a note), or text too long to be a
-   * statement name.
+   * The name Amazon gives a charge in its Your Payments data ("Prime Video
+   * Channels"), or '' for anything that is not plainly one: an order number,
+   * anything that could be a card or account number, text without a letter,
+   * or text too long to be a statement name. Failing closed costs little:
+   * the description falls back to the order number.
    */
   function sellerName(value) {
     const v = clean(value || '');
     if (!v || v.length > 60 || !/\p{L}/u.test(v) || orderNumberIn(v) || CARD_LIKE.test(v)) return '';
     return v;
-  }
-
-  /** The seller line is the block right after the one holding the order link. */
-  function sellerAfterOrderLink(line) {
-    const link = line.querySelector('a.a-link-normal');
-    for (let el = link; el && el !== line; el = el.parentElement) {
-      const next = el.nextElementSibling;
-      if (next && next.tagName === 'DIV') return text(next);
-    }
-    return '';
   }
 
   // ---------------------------------------------------------------------------

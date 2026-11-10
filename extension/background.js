@@ -12,8 +12,10 @@ const D = self.MTD.delivery;
 const KEY = 'state';
 const TEST_SCRIPT_ID = 'piggybanks-test-site';
 // How long after a read starts before a reader that does not answer counts
-// as gone (the popup may still be injecting it).
+// as gone (the popup may still be injecting it). A check that comes sooner
+// waits out the rest.
 const READER_GRACE_MS = 5000;
+const NAVIGATION_GRACE_MS = 2000;
 // How long after the Amazon tab starts loading a page to check the reader:
 // a real navigation has removed it by then; an in-page one has not.
 const NAVIGATION_CHECK_MS = 1500;
@@ -119,7 +121,7 @@ async function handle(msg, sender) {
         if (msg.outcome === 'received') {
           s.phase = 'sent';
           s.notice = null;
-        } else if (msg.outcome === 'unreachable') {
+        } else {
           s.phase = 'ready';
           s.notice = 'unreachable';
         }
@@ -144,8 +146,8 @@ async function startDelivery() {
   const site = toTest ? 'test' : 'production';
   return update(async (s) => {
     if (!['ready', 'sending', 'sent'].includes(s.phase) || !s.exportText) return false;
-    cancelDelivery(s);
     const tab = await chrome.tabs.create({ url: D.importUrl(site), active: true });
+    cancelDelivery(s);
     s.phase = 'sending';
     s.notice = null;
     s.delivery = { id: crypto.randomUUID(), tabId: tab.id, startedAt: Date.now(), target: site };
@@ -155,11 +157,17 @@ async function startDelivery() {
 
 /**
  * If the current read's reader no longer answers (its tab left the page),
- * the read failed. `graceMs` spares a read that may still be being injected.
+ * the read failed. A read younger than `graceMs` may still be being
+ * injected, so the check waits until it is that old.
  */
 async function checkReader(graceMs) {
   const { [KEY]: s } = await chrome.storage.session.get(KEY);
-  if (!s || s.phase !== 'reading' || !s.read || Date.now() - s.read.startedAt < graceMs) return;
+  if (!s || s.phase !== 'reading' || !s.read) return;
+  const wait = graceMs - (Date.now() - s.read.startedAt);
+  if (wait > 0) {
+    setTimeout(() => checkReader(graceMs).catch(() => {}), wait);
+    return;
+  }
   const { id, tabId } = s.read;
   const alive = await tell(tabId, { type: 'read-ping', readId: id }).then(
     (answer) => answer === true,
@@ -177,7 +185,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status !== 'loading') return;
   chrome.storage.session.get(KEY).then(({ [KEY]: s }) => {
     if (s && s.phase === 'reading' && s.read && s.read.tabId === tabId) {
-      setTimeout(() => checkReader(0).catch(() => {}), NAVIGATION_CHECK_MS);
+      setTimeout(() => checkReader(NAVIGATION_GRACE_MS).catch(() => {}), NAVIGATION_CHECK_MS);
     }
   });
 });

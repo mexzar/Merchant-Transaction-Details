@@ -89,11 +89,12 @@ describe('parseTransactionsPage', () => {
     expect(page.next).toEqual({ ...previous, exclusiveStartKey: 'page-key-2' });
   });
 
-  it('reads the older server-rendered page and its next-page form', () => {
+  it('reads the older server-rendered page and its next-page form, never a line found by position', () => {
     const page = P.parseTransactionsPage(parseHtml(fixture('payments-form.html')));
+    // Its seller line has no name of its own, so it is not read at all.
     expect(page.transactions).toEqual([
-      { date: '2026-11-05', amount: -45.19, orderNumber: '111-0000000-0000005', seller: 'Prime Video Channels' },
-      { date: '2026-10-30', amount: 8, orderNumber: '111-0000000-0000006', seller: 'AMZN Mktp US' },
+      { date: '2026-11-05', amount: -45.19, orderNumber: '111-0000000-0000005', seller: '' },
+      { date: '2026-10-30', amount: 8, orderNumber: '111-0000000-0000006', seller: '' },
     ]);
     expect(page.next).toEqual({
       kind: 'form',
@@ -145,12 +146,26 @@ describe('parseTransactionsPage', () => {
     const rows = [
       ['Prime Video Channels', 'Prime Video Channels'],
       ['Kindle\u200b Svcs\u202e', 'Kindle Svcs'],
+      ['Audible US', 'Audible US'],
       ['Visa ****1234', ''],
       ['•••• 1234', ''],
       ['Card ending in 1234', ''],
+      ['Card ending with 1234', ''],
+      ['Savings account ending 1234', ''],
+      ['Chase Freedom ●●●● 1234', ''],
+      ['Chase Freedom ... 1234', ''],
+      ['Chase Freedom …1234', ''],
+      ['Citi Double Cash 1234', ''],
+      ['Amazon Store Card 1234', ''],
+      ['Checking 1234', ''],
+      ['xxxx-xxxx-xxxx-1234', ''],
+      ['Card 4111-1111-1111-1111', ''],
+      ['Seller 411111111111', ''],
       ['Mastercard', ''],
+      ['Debit', ''],
       ['D01-0000000-0000003', ''],
       ['12345', ''],
+      ['\u3164\u3164', ''],
       ['x'.repeat(61), ''],
     ].map(([statementDescriptor, expected]) => ({ statementDescriptor, expected }));
     const page = P.parseTransactionsPage(

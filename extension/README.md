@@ -5,8 +5,10 @@ and hands them to your Piggy Banks import page, where each purchase's
 products are added to the note on the matching bank transaction. No password
 to type, no separate app to run.
 
-It writes the same file as the desktop app in this repository, so you can
-also save it and upload it on the import page yourself.
+It writes the same format as the desktop app in this repository (without
+your sign-in email, and with each description kept within the 400
+characters Piggy Banks keeps), so you can also save it and upload it on the
+import page yourself.
 
 ## Install
 
@@ -73,10 +75,13 @@ Crayola Dry Erase Marker
 One product per line, cut to 60 characters, then the order number. A refund
 starts with "Return of". A long order lists its first products and how many
 more. When the products cannot be read (Whole Foods, Amazon Fresh and
-in-store purchases, for instance), the description is the name Amazon shows
-for the charge ("Prime Video Channels"), or the order number alone when that
-name is a generic one like "AMZN Mktp US". Anything that looks like a payment
-card is never used.
+in-store purchases, for instance), the description is the name Amazon gives
+the charge in its Your Payments data ("Prime Video Channels", "Amazon.com")
+followed by the order number. The order number stands alone when there is no
+such name, when the name starts with "AMZN " or "Amazon.com*", or when it
+could be part of a card or account number (four or more digits in a row,
+masked digits, or a card brand). Amazon's older Your Payments page has no
+such name, so there it is always the order number.
 
 ## Permissions
 
@@ -85,7 +90,7 @@ card is never used.
 | Read the tab you click in (`activeTab`, `scripting`) | To read Amazon in that tab. Only when you click the button, only that tab, and not after it leaves the page. The extension has no standing access to Amazon. |
 | Storage (`storage`) | To keep the result in memory until you click Done. |
 | piggybanksonline.com | To hand the result to the import page in the tab **Send** opened. Chrome describes this as access to piggybanksonline.com; the extension's script runs only on the import page, and does nothing there unless **Send** opened it. |
-| Piggy Banks test site (optional) | Only if you turn on **Send to the Piggy Banks test site** in Settings. Your browser asks first. While it is on, **Send** goes to the test site; turn it off to send to piggybanksonline.com. |
+| Piggy Banks test site (optional) | Only if you turn on **Send to the Piggy Banks test site** in Settings. Your browser asks first. While it is on, **Send** goes to the test site and the popup says so; turn it off to send to piggybanksonline.com. |
 
 ## Limits
 

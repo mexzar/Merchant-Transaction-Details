@@ -84,13 +84,16 @@
         );
         $('notice').hidden = s.notice !== 'unreachable';
         $('notice').textContent =
-          "Couldn't reach the Piggy Banks import page. Sign in to Piggy Banks in that tab, then click Send again.";
+          "Couldn't reach the Piggy Banks import page. Sign in to Piggy Banks in that tab, then click Send to Piggy Banks again.";
+        $('target-note').hidden = !$('test-site').checked;
         $('send-button').disabled = !m.count;
         return show('ready');
       }
       case 'sending':
+        $('resend-button').disabled = false;
         return show('sending');
       case 'sent':
+        $('send-again-button').disabled = false;
         return show('sent');
       case 'failed':
         $('error').textContent = Object.hasOwn(ERRORS, s.error) ? ERRORS[s.error] : ERRORS.layout;
@@ -141,9 +144,17 @@
     } else {
       await chrome.permissions.remove({ origins: TEST_ORIGINS }).catch(() => {});
     }
+    render(current);
   }
 
-  const send = () => chrome.runtime.sendMessage({ type: 'send' });
+  // One click, one tab: the send buttons stay off until the state comes back.
+  const SEND_BUTTONS = ['send-button', 'resend-button', 'send-again-button'];
+  async function send() {
+    for (const id of SEND_BUTTONS) $(id).disabled = true;
+    await chrome.runtime.sendMessage({ type: 'send' }).catch(() => {});
+    const stored = await chrome.storage.session.get('state');
+    render(stored.state);
+  }
   const discard = () => chrome.runtime.sendMessage({ type: 'discard' });
   $('open-amazon-button').addEventListener('click', () => chrome.tabs.create({ url: ORDERS_URL }));
   $('read-button').addEventListener('click', startRead);

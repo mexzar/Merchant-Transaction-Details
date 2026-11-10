@@ -209,13 +209,19 @@
       }
     }
 
+    // Orders found with product names. A store purchase is found but has
+    // none, and its details page has none either, so it is not looked up.
+    function withProducts() {
+      return Array.from(orders.values()).filter((o) => o.items.length).length;
+    }
+
     async function findInOrderDetails() {
       const missing = Array.from(needed).filter((n) => !orders.has(n));
       for (const orderNumber of missing.slice(0, limits.orderDetails)) {
         const doc = await getPage(`${ORDER_DETAILS_PATH}?orderID=${encodeURIComponent(orderNumber)}`);
         const parsed = P.parseOrderDetailsPage(doc);
         if (parsed && parsed.items.length) orders.set(orderNumber, parsed);
-        onProgress({ stage: 'details', count: orders.size, of: needed.size });
+        onProgress({ stage: 'details', count: withProducts(), of: needed.size });
       }
     }
 
@@ -226,9 +232,7 @@
         payments: transactions.length,
         paymentsCut,
         ordersNeeded: needed.size,
-        // Orders found with product names. A store purchase is found but has
-        // none, and its details page has none either, so it is not looked up.
-        ordersFound: Array.from(orders.values()).filter((o) => o.items.length).length,
+        ordersFound: withProducts(),
         stopped,
       },
     };

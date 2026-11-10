@@ -11,9 +11,10 @@ import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-const ROOT = new URL('../../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const fixture = (name) => readFileSync(join(ROOT, 'test', 'fixtures', name), 'utf8');
 const EMPTY = '<html><body></body></html>';
 const IMPORT_URL = 'https://piggybanksonline.com/import-details';
@@ -204,9 +205,22 @@ try {
     ],
   );
 
-  // Sent: the export stays until Done, so it can be sent again.
+  // Sent: the export stays until Done, so it can be sent again. A
+  // double-click on Send again opens one tab, not two.
   await popup.locator('#sent:not([hidden])').waitFor({ timeout: 10_000 });
   assert.ok((await state()).exportText, 'kept until Done');
+  const pagesBefore = context.pages().length;
+  opened = context.waitForEvent('page');
+  await popup.locator('#send-again-button').dblclick();
+  const againPage = await opened;
+  await popup.waitForTimeout(1500);
+  assert.equal(context.pages().length, pagesBefore + 1, 'one tab for a double-click');
+  await againPage.waitForLoadState();
+  await againPage.goto(IMPORT_URL);
+  await againPage.locator('#status', { hasText: 'Imported' }).waitFor({ timeout: 30_000 });
+  assert.equal((await againPage.evaluate(() => window.__taken)).length, 1, 'sent again once');
+  assert.deepEqual(await importPage.evaluate(() => window.__taken).then((t) => t.length), 1, 'the first tab got nothing more');
+  await popup.locator('#sent:not([hidden])').waitFor({ timeout: 10_000 });
   await popup.locator('#done-button').click();
   const done = await waitForPhase('idle');
   assert.equal(done.exportText, null);
