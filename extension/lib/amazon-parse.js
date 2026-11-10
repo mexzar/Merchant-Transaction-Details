@@ -32,6 +32,18 @@
     return parts.join(' ').replace(/\s+/g, ' ').trim();
   }
 
+  /**
+   * Text sellers and Amazon wrote, on one line, without control or invisible
+   * formatting characters (zero-width, bidi controls), which have no place in
+   * a note.
+   */
+  function clean(value) {
+    return String(value)
+      .replace(/[\p{Cf}\u2028\u2029]/gu, '')
+      .replace(/[\p{Cc}\s]+/gu, ' ')
+      .trim();
+  }
+
   /** "Mar 16, 2026" or "November 5, 2026" (the first in the text) → "2026-03-16". */
   function parseDate(value) {
     const m = DATE.exec(value || '');
@@ -147,17 +159,24 @@
     if (!Array.isArray(list)) return null;
 
     let next = null;
-    if (state.hasMore && state.lastEvaluatedPageKey && props.token) {
+    if (state.hasMore) {
       const request = props.request || {};
-      next = {
-        kind: 'data',
-        exclusiveStartKey: state.lastEvaluatedPageKey,
-        token: String(props.token),
-        locale: request.locale || 'en_US',
-        widgetName: request.widgetName || 'ViewTransactions',
-      };
+      // More pages, but nothing to ask for them with: say the read was cut
+      // short rather than end it quietly.
+      next =
+        state.lastEvaluatedPageKey && props.token
+          ? {
+              kind: 'data',
+              exclusiveStartKey: state.lastEvaluatedPageKey,
+              token: String(props.token),
+              locale: request.locale || 'en_US',
+              widgetName: request.widgetName || 'ViewTransactions',
+            }
+          : { kind: 'missing' };
     }
-    return { transactions: readTransactionList(list), next };
+    const transactions = readTransactionList(list);
+    if (list.length && !transactions.length) return null;
+    return { transactions, next };
   }
 
   /** A further page from the JSON endpoint, read against the `next` that asked for it. */
@@ -166,10 +185,16 @@
     const list = display && display.transactionsList;
     if (!Array.isArray(list)) return null;
     const transactions = readTransactionList(list);
+    if (list.length && !transactions.length) return null;
     const lastKey = display.lastEvaluatedKey;
     const next = lastKey && list.length ? { ...previous, exclusiveStartKey: lastKey } : null;
     return { transactions, next };
   }
+
+  // A page with rows of which none reads (an account in another language, a
+  // changed date format) is returned as null, "not a page this reads",
+  // rather than as an empty page: that would read as "no purchases" and keep
+  // paging.
 
   function readTransactionList(list) {
     const out = [];
@@ -180,7 +205,7 @@
       if (!date || amount === null) continue;
       const order = (Array.isArray(t.orderData) && t.orderData[0]) || {};
       const orderNumber = orderNumberIn(String(order.orderDisplayString || ''));
-      const seller = typeof t.statementDescriptor === 'string' ? t.statementDescriptor.trim() : '';
+      const seller = typeof t.statementDescriptor === 'string' ? t.statementDescriptor : '';
       out.push({ date, amount, orderNumber, seller: sellerName(seller) });
     }
     return out;
@@ -188,7 +213,9 @@
 
   function parseTransactionForm(form) {
     const transactions = [];
+    let rows = 0;
     for (const dateBox of form.querySelectorAll('div.apx-transaction-date-container')) {
+      rows++;
       const date = parseDate(text(dateBox.querySelector('span')));
       if (!date) continue;
       let group = dateBox.nextElementSibling;
@@ -197,6 +224,7 @@
       for (const line of group.querySelectorAll('div.apx-transactions-line-item-component-container')) {
         const first = line.firstElementChild;
         if (!first) continue;
+        rows++;
         const amount = parseAmount(text(first.querySelector('span.a-size-base-plus')));
         if (amount === null) continue;
         let orderNumber = null;
@@ -207,6 +235,7 @@
         transactions.push({ date, amount, orderNumber, seller: sellerName(sellerAfterOrderLink(line)) });
       }
     }
+    if (rows && !transactions.length) return null;
 
     const state = form.querySelector("input[name='ppw-widgetState']");
     const ie = form.querySelector("input[name='ie']");
@@ -220,9 +249,21 @@
     return { transactions, next };
   }
 
-  /** A seller line that only repeats an order number names no seller. */
+  // A payment card: "Visa ****1234", "•••• 1234", "ending in 1234".
+  const CARD_LIKE =
+    /(?:[*•·xX]{2,}|ending in)\s*\d{2,4}|\b(?:visa|master ?card|amex|american express|discover|debit card|credit card)\b/i;
+
+  /**
+   * The name Amazon shows for a charge ("Prime Video Channels"), or '' for
+   * anything that is not one: an order number, something that looks like a
+   * payment card (the older page finds this line by position, so a changed
+   * layout must never turn a card into a note), or text too long to be a
+   * statement name.
+   */
   function sellerName(value) {
-    return value && !orderNumberIn(value) ? value : '';
+    const v = clean(value || '');
+    if (!v || v.length > 60 || !/\p{L}/u.test(v) || orderNumberIn(v) || CARD_LIKE.test(v)) return '';
+    return v;
   }
 
   /** The seller line is the block right after the one holding the order link. */
@@ -337,10 +378,10 @@
           product = { linkTitle: '', altTitle: '', quantity: 1, quantityRead: false };
           byAsin.set(m[1], product);
         }
-        const own = spacedText(a);
+        const own = clean(spacedText(a));
         if (own.length > product.linkTitle.length) product.linkTitle = own;
         const img = a.querySelector('img[alt]');
-        const alt = img ? img.getAttribute('alt').replace(/\s+/g, ' ').trim() : '';
+        const alt = img ? clean(img.getAttribute('alt')) : '';
         if (alt.length > product.altTitle.length) product.altTitle = alt;
         if (!product.quantityRead) {
           const qty = quantityNear(a);

@@ -7,7 +7,8 @@
  *   reading   reading Amazon in `read.tabId`
  *   ready     an export is waiting (`exportText`), not yet taken by Piggy Banks
  *   sending   handing it to the import page in `delivery.tabId`
- *   sent      Piggy Banks took it; the export is gone from the extension
+ *   sent      Piggy Banks took it; the export stays until Done, so it can be
+ *             sent again if the page could not load the book
  *   failed    the read stopped (`error`)
  */
 (function (root) {
@@ -22,6 +23,15 @@
   const IMPORT_PATH = '/import-details';
   const AMAZON_ORIGIN = 'https://www.amazon.com';
 
+  // What the popup injects into the Amazon tab, in order.
+  const READER_FILES = [
+    'lib/delivery.js',
+    'lib/format.js',
+    'lib/amazon-parse.js',
+    'lib/amazon-read.js',
+    'content/amazon-reader.js',
+  ];
+
   // The import page must ask for the export within this long of "Send".
   const DELIVERY_WINDOW_MS = 15 * 60 * 1000;
   // Piggy Banks refuses an export over 8 MB (MAX_FILE_BYTES).
@@ -34,10 +44,14 @@
     'months-12': { label: 'Last 12 months', days: 365 },
   };
 
+  function rangeFor(key) {
+    return typeof key === 'string' && Object.hasOwn(RANGES, key) ? RANGES[key] : null;
+  }
+
   function initialState() {
     return {
       phase: 'idle',
-      read: null, // { tabId, rangeKey, startedAt }
+      read: null, // { id, tabId, rangeKey, startedAt }
       progress: null, // { stage, count, of? }
       error: null,
       exportText: null,
@@ -76,11 +90,12 @@
     return target === 'test' ? origin === TEST_ORIGIN : PRODUCTION_ORIGINS.includes(origin);
   }
 
-  /** The top frame of the tab a read was started in, on Amazon. */
-  function isReaderSender(state, sender) {
+  /** The top frame of the tab the current read runs in, on Amazon, for that read. */
+  function isReaderSender(state, sender, readId) {
     return (
       state.phase === 'reading' &&
       !!state.read &&
+      readId === state.read.id &&
       !!sender.tab &&
       sender.tab.id === state.read.tabId &&
       sender.frameId === 0 &&
@@ -103,6 +118,12 @@
     return { deliveryId: d.id, payload: state.exportText };
   }
 
+  /** Whether the delivery `deliveryId` may still be posted: asked before every post. */
+  function stillWanted(state, sender, deliveryId, now) {
+    const c = claim(state, sender, now);
+    return !!c && c.deliveryId === deliveryId;
+  }
+
   function utf8Bytes(text) {
     return new TextEncoder().encode(text).length;
   }
@@ -112,13 +133,16 @@
     TEST_ORIGIN,
     IMPORT_PATH,
     AMAZON_ORIGIN,
+    READER_FILES,
     MAX_EXPORT_BYTES,
     RANGES,
+    rangeFor,
     initialState,
     importUrl,
     isPiggyBanks,
     isReaderSender,
     claim,
+    stillWanted,
     originOf,
     utf8Bytes,
   };

@@ -45,18 +45,23 @@
 
   /**
    * Deliver `payload` to the page in `self.window`. Resolves `received` once
-   * the page has taken it, or `unreachable` when the page never answered.
+   * the page has taken it, `unreachable` when the page never answered, or
+   * `cancelled` when the user cancelled (`signal`, or `stillWanted` saying
+   * no).
    *
    * Says `hello` every `helloEveryMs` until `ready` (or a ready the page sent
-   * by itself), then posts `deliver` once and waits `receivedWithinMs` for
-   * `received`. The page posts `received` before it imports, so a delivery
-   * that hears nothing was dropped (an import was running), and saying
-   * `hello` again is safe. Gives up after `maxHellos` hellos or
-   * `maxDeliveries` deliveries.
+   * by itself). Then asks `stillWanted()`, so a delivery cancelled since it
+   * started is never posted, posts `deliver` once and waits
+   * `receivedWithinMs` for `received`. The page posts `received` before it
+   * imports, so a delivery that hears nothing was dropped (an import was
+   * running), and saying `hello` again is safe; a late `received` still
+   * counts. Gives up after `maxHellos` hellos or `maxDeliveries` deliveries.
    */
   function deliver({
     self,
     payload,
+    stillWanted = () => true,
+    signal,
     helloEveryMs = 1000,
     maxHellos = 20,
     receivedWithinMs = 5000,
@@ -66,7 +71,7 @@
     return new Promise((resolve) => {
       let hellos = 0;
       let deliveries = 0;
-      let waitingForReceived = false;
+      let waiting = false;
       let timer = null;
       let done = false;
 
@@ -81,7 +86,7 @@
       }
 
       function sayHello() {
-        if (done || waitingForReceived) return;
+        if (done || waiting) return;
         if (hellos >= maxHellos) return finish('unreachable');
         hellos++;
         post(envelope('hello'));
@@ -90,19 +95,34 @@
 
       function onMessage(event) {
         const reply = readReply(event, self);
-        if (reply === 'received' && waitingForReceived) return finish('received');
-        if (reply !== 'ready' || waitingForReceived || done) return;
+        if (done || !reply) return;
+        if (reply === 'received') {
+          if (deliveries > 0) finish('received');
+          return;
+        }
+        if (waiting) return;
         if (deliveries >= maxDeliveries) return finish('unreachable');
-        deliveries++;
-        waitingForReceived = true;
+        waiting = true;
         timers.clearTimeout(timer);
-        post(envelope('deliver', payload));
-        timer = timers.setTimeout(() => {
-          waitingForReceived = false;
-          sayHello();
-        }, receivedWithinMs);
+        Promise.resolve()
+          .then(stillWanted)
+          .catch(() => false)
+          .then((wanted) => {
+            if (done) return;
+            if (!wanted) return finish('cancelled');
+            deliveries++;
+            post(envelope('deliver', payload));
+            timer = timers.setTimeout(() => {
+              waiting = false;
+              sayHello();
+            }, receivedWithinMs);
+          });
       }
 
+      if (signal) {
+        if (signal.aborted) return resolve('cancelled');
+        signal.addEventListener('abort', () => finish('cancelled'), { once: true });
+      }
       self.window.addEventListener('message', onMessage);
       sayHello();
     });

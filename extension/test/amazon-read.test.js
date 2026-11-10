@@ -201,6 +201,40 @@ describe('readAmazon', () => {
     expect(amazon.requests).toHaveLength(1);
   });
 
+  it('says the read was cut short when Amazon offers more pages without a way to ask', async () => {
+    const page = fixture('payments-data.html').replace('"lastEvaluatedPageKey": "page-key-1"', '"lastEvaluatedPageKey": null');
+    const amazon = fakeAmazon({ ...HAPPY, [PAYMENTS]: page });
+    const result = await read(amazon).run;
+    expect(result.stats.paymentsCut).toBe(true);
+    expect(amazon.requests.map((r) => r.key)).not.toContain(PAYMENTS_DATA);
+  });
+
+  it('fails the read on a payments page whose rows none read, without paging on', async () => {
+    const page = fixture('payments-data.html').replace(/"formattedDate": "[^"]*"/g, '"formattedDate": "8 nov 2026"');
+    const amazon = fakeAmazon({ ...HAPPY, [PAYMENTS]: page });
+    await expect(read(amazon).run).rejects.toMatchObject({ code: 'layout' });
+    expect(amazon.requests).toHaveLength(1);
+  });
+
+  it('keeps the payments when an order page throws something unexpected', async () => {
+    const amazon = fakeAmazon(HAPPY);
+    const brokenParse = (html) => {
+      if (html === HAPPY[ORDERS_2026]) throw new TypeError('boom');
+      return parseHtml(html);
+    };
+    const result = await read(amazon, { parseHtml: brokenParse }).run;
+    expect(result.transactions).toHaveLength(4);
+    expect(result.stats.stopped).toBe('layout');
+  });
+
+  it('counts only orders with product names as found', async () => {
+    // The store purchase (111-…7) is found but has no products.
+    const page = fixture('payments-data.html').replace('111-0000000-0000001', '111-0000000-0000007');
+    const result = await read(fakeAmazon({ ...HAPPY, [PAYMENTS]: page })).run;
+    expect(result.orders.get('111-0000000-0000007')).toEqual({ items: [] });
+    expect(result.stats).toMatchObject({ ordersNeeded: 4, ordersFound: 2 });
+  });
+
   it('reports a dropped connection as a network failure', async () => {
     const amazon = fakeAmazon({ [PAYMENTS]: new TypeError('Failed to fetch') });
     await expect(read(amazon).run).rejects.toMatchObject({ code: 'network' });

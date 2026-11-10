@@ -27,7 +27,8 @@
         </select>
         <button id="read-button" class="primary">Read my Amazon purchases</button>
         <p class="hint">
-          Reads Your Payments and Your Orders in this tab, one page at a time. It can take a minute.
+          Reads Your Payments and Your Orders in this tab, one page at a time. Leave the tab on this page
+          until it's done: a minute or two, a few minutes for 12 months.
         </p>
       </section>
 
@@ -49,13 +50,18 @@
 
       <section id="sending" hidden>
         <p role="status">Sending to Piggy Banks in the tab that just opened.</p>
-        <p class="hint">If you're asked to sign in, sign in, then click Send again.</p>
-        <button id="cancel-send-button">Cancel</button>
+        <p class="hint">Asked to sign in? Sign in in that tab, then click Send again.</p>
+        <div class="row">
+          <button id="resend-button">Send again</button>
+          <button id="cancel-send-button">Cancel</button>
+        </div>
       </section>
 
       <section id="sent" hidden>
         <p role="status">Sent to Piggy Banks. The import page shows what it added.</p>
+        <p class="hint">If the page said it couldn't load your account, click Send again.</p>
         <button id="done-button" class="primary">Done</button>
+        <button id="send-again-button">Send again</button>
       </section>
 
       <section id="failed" hidden>

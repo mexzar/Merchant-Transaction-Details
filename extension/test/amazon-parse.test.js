@@ -114,6 +114,50 @@ describe('parseTransactionsPage', () => {
     expect(P.parseTransactionsPage(parseHtml('<html><body><h1>Hello</h1></body></html>'))).toBeNull();
     expect(P.parseTransactionsPage(parseHtml('<script id="__NEXT_DATA__">{not json</script>'))).toBeNull();
   });
+
+  const dataPage = (transactionList, extra = {}) =>
+    parseHtml(
+      `<script id="__NEXT_DATA__">${JSON.stringify({
+        props: {
+          pageProps: {
+            state: { transactionResponseState: { visibleTransactionResponse: { transactionList }, ...extra } },
+            token: 't',
+          },
+        },
+      })}</script>`,
+    );
+
+  it('returns null for rows of which none reads, rather than "no purchases"', () => {
+    // An account set to Spanish: the dates are not ones this reads.
+    const spanish = [{ formattedAmount: '-$5.00', formattedDate: '16 mar 2026', orderData: [] }];
+    expect(P.parseTransactionsPage(dataPage(spanish))).toBeNull();
+    expect(P.parseTransactionDataPage({ displayResponse: { transactionsList: spanish } }, {})).toBeNull();
+    const form = fixture('payments-form.html').replaceAll('November 5, 2026', '5 nov 2026').replaceAll('October 30, 2026', '30 oct 2026');
+    expect(P.parseTransactionsPage(parseHtml(form))).toBeNull();
+  });
+
+  it('marks more pages it cannot ask for, instead of ending quietly', () => {
+    const row = [{ formattedAmount: '-$5.00', formattedDate: 'Mar 16, 2026', orderData: [] }];
+    expect(P.parseTransactionsPage(dataPage(row, { hasMore: true })).next).toEqual({ kind: 'missing' });
+  });
+
+  it('keeps a seller name, but never a card, an order number or invisible characters', () => {
+    const rows = [
+      ['Prime Video Channels', 'Prime Video Channels'],
+      ['Kindle\u200b Svcs\u202e', 'Kindle Svcs'],
+      ['Visa ****1234', ''],
+      ['•••• 1234', ''],
+      ['Card ending in 1234', ''],
+      ['Mastercard', ''],
+      ['D01-0000000-0000003', ''],
+      ['12345', ''],
+      ['x'.repeat(61), ''],
+    ].map(([statementDescriptor, expected]) => ({ statementDescriptor, expected }));
+    const page = P.parseTransactionsPage(
+      dataPage(rows.map((r) => ({ formattedAmount: '-$1.00', formattedDate: 'Mar 1, 2026', statementDescriptor: r.statementDescriptor }))),
+    );
+    expect(page.transactions.map((t) => t.seller)).toEqual(rows.map((r) => r.expected));
+  });
 });
 
 describe('parseOrderHistoryPage', () => {
@@ -134,6 +178,12 @@ describe('parseOrderHistoryPage', () => {
       { title: 'Slime Kit for Kids, 24 Pack Mini Slime Party Favors', quantity: 1 },
       { title: 'Flower Party Balloons', quantity: 3 },
     ]);
+  });
+
+  it('strips control and invisible characters from product names', () => {
+    const html = `<div class="order-card"><span dir="ltr">111-0000000-0000008</span>
+      <a href="/dp/B000000008">Zero\u200bWidth \u202eBidi\u0007 Title</a></div>`;
+    expect(P.parseOrderHistoryPage(parseHtml(html)).orders[0].items).toEqual([{ title: 'ZeroWidth Bidi Title', quantity: 1 }]);
   });
 
   it('lists no products for a store purchase', () => {

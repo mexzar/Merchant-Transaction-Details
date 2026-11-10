@@ -10,25 +10,22 @@
   const $ = (id) => document.getElementById(id);
 
   const ORDERS_URL = 'https://www.amazon.com/your-orders/orders';
-  const READER_FILES = [
-    'lib/delivery.js',
-    'lib/format.js',
-    'lib/amazon-parse.js',
-    'lib/amazon-read.js',
-    'content/amazon-reader.js',
-  ];
+  const TEST_ORIGINS = [`${D.TEST_ORIGIN}/*`];
+  // The extension reads Amazon in the background of the tab, so a sign-in or
+  // CAPTCHA page it meets is not on screen: reloading the tab brings it up.
   const ERRORS = {
-    'sign-in': "Amazon asked you to sign in or confirm it's you. Do that in the Amazon tab, then read again.",
+    'sign-in': "Amazon wants you to sign in or confirm it's you. Reload the Amazon tab, do what it asks, then read again.",
     unavailable: "Amazon didn't answer as expected. Try again in a few minutes.",
-    layout: "Couldn't read your Amazon pages. Amazon may have changed them.",
+    layout: "Couldn't read your Amazon pages. Amazon may have changed them, or this account isn't in English.",
     network: "Couldn't reach Amazon. Check your connection, then try again.",
     'tab-closed': 'The Amazon tab closed before the read finished.',
+    'tab-left': 'The Amazon tab left the page before the read finished. Read again, and leave that tab open until it is done.',
     'too-large': "That's more than Piggy Banks takes at once. Pick a shorter range.",
     'not-amazon': 'Open Your Orders on amazon.com in this tab first.',
     'no-start': "Couldn't start reading in this tab. Reload the Amazon page, then try again.",
   };
   const STOPPED = {
-    'sign-in': 'Amazon asked you to sign in partway through.',
+    'sign-in': 'Amazon asked you to sign in partway through. Reload the Amazon tab and read again to fill in the rest.',
     unavailable: 'Amazon stopped answering partway through.',
     layout: "Some order pages couldn't be read.",
     network: 'The connection dropped partway through.',
@@ -72,10 +69,10 @@
         ).toLowerCase()}.`;
         const caveats = [];
         if (m.paymentsCut) caveats.push('Your history is longer than one read covers. The oldest part is left out.');
-        if (m.stopped && STOPPED[m.stopped]) caveats.push(STOPPED[m.stopped]);
+        if (m.stopped && Object.hasOwn(STOPPED, m.stopped)) caveats.push(STOPPED[m.stopped]);
         if (m.ordersNeeded > m.ordersFound) {
           caveats.push(
-            `Products found for ${m.ordersFound} of ${plural(m.ordersNeeded, 'order', 'orders')}. The rest show the order number.`,
+            `Product names found for ${m.ordersFound} of ${plural(m.ordersNeeded, 'order', 'orders')}. The rest have the seller or the order number instead.`,
           );
         }
         $('caveats').replaceChildren(
@@ -96,7 +93,7 @@
       case 'sent':
         return show('sent');
       case 'failed':
-        $('error').textContent = ERRORS[s.error] || ERRORS.layout;
+        $('error').textContent = Object.hasOwn(ERRORS, s.error) ? ERRORS[s.error] : ERRORS.layout;
         return show('failed');
       default:
         return show(onAmazon ? 'start' : 'open-amazon');
@@ -107,15 +104,16 @@
     localError = null;
     const rangeKey = $('range').value;
     const begun = await chrome.runtime.sendMessage({ type: 'read-begin', tabId: tab.id, rangeKey });
-    if (!begun) return;
+    if (!begun || typeof begun.readId !== 'string') return;
     try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: READER_FILES });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: 'ISOLATED', files: D.READER_FILES });
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        func: (key) => {
-          globalThis.MTD.reader.start({ rangeKey: key });
+        world: 'ISOLATED',
+        func: (key, id) => {
+          globalThis.MTD.reader.start({ rangeKey: key, readId: id });
         },
-        args: [rangeKey],
+        args: [rangeKey, begun.readId],
       });
     } catch (_) {
       await chrome.runtime.sendMessage({ type: 'cancel' });
@@ -134,29 +132,32 @@
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 
+  // The test-site setting is the optional permission itself: granted means
+  // Send goes to the test site. The background reacts to the change, so it
+  // holds even if the browser's prompt closes this popup.
   async function setTestSite(on) {
-    const origins = [`${D.TEST_ORIGIN}/*`];
     if (on) {
-      const granted = await chrome.permissions.request({ origins });
-      await chrome.storage.local.set({ target: granted ? 'test' : 'production' });
-      $('test-site').checked = granted;
+      $('test-site').checked = await chrome.permissions.request({ origins: TEST_ORIGINS });
     } else {
-      await chrome.storage.local.set({ target: 'production' });
-      await chrome.permissions.remove({ origins }).catch(() => {});
+      await chrome.permissions.remove({ origins: TEST_ORIGINS }).catch(() => {});
     }
   }
 
+  const send = () => chrome.runtime.sendMessage({ type: 'send' });
+  const discard = () => chrome.runtime.sendMessage({ type: 'discard' });
   $('open-amazon-button').addEventListener('click', () => chrome.tabs.create({ url: ORDERS_URL }));
   $('read-button').addEventListener('click', startRead);
   $('stop-button').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'cancel' }));
-  $('send-button').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'send' }));
+  $('send-button').addEventListener('click', send);
   $('save-button').addEventListener('click', save);
-  $('discard-button').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'discard' }));
+  $('discard-button').addEventListener('click', discard);
+  $('resend-button').addEventListener('click', send);
   $('cancel-send-button').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'cancel' }));
-  $('done-button').addEventListener('click', () => chrome.runtime.sendMessage({ type: 'discard' }));
+  $('done-button').addEventListener('click', discard);
+  $('send-again-button').addEventListener('click', send);
   $('retry-button').addEventListener('click', () => {
     localError = null;
-    chrome.runtime.sendMessage({ type: 'discard' });
+    discard();
     render(current);
   });
   $('test-site').addEventListener('change', (e) => setTestSite(e.target.checked));
@@ -165,10 +166,11 @@
     if (area === 'session' && changes.state) render(changes.state.newValue);
   });
 
-  const { target } = await chrome.storage.local.get('target');
-  const testAllowed = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
-  $('test-site').checked = target === 'test' && testAllowed;
+  $('test-site').checked = await chrome.permissions.contains({ origins: TEST_ORIGINS });
 
   const stored = await chrome.storage.session.get('state');
   render(stored.state);
+  // A read whose tab has since left the page shows as failed rather than
+  // reading forever.
+  if (stored.state && stored.state.phase === 'reading') chrome.runtime.sendMessage({ type: 'check-read' });
 })();

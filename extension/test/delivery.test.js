@@ -53,16 +53,40 @@ describe('claim', () => {
   });
 });
 
+describe('stillWanted', () => {
+  it('says yes only for the current delivery, while it is still being sent', () => {
+    expect(D.stillWanted(sending(), importPage, 'd-1', NOW)).toBe(true);
+    expect(D.stillWanted(sending(), importPage, 'd-0', NOW)).toBe(false);
+    // Cancel puts the export back to ready.
+    expect(D.stillWanted(sending({ phase: 'ready', delivery: null }), importPage, 'd-1', NOW)).toBe(false);
+  });
+});
+
 describe('isReaderSender', () => {
-  const reading = { ...D.initialState(), phase: 'reading', read: { tabId: 3, rangeKey: 'months-3', startedAt: NOW } };
+  const reading = {
+    ...D.initialState(),
+    phase: 'reading',
+    read: { id: 'r-2', tabId: 3, rangeKey: 'months-3', startedAt: NOW },
+  };
   const amazonTab = { tab: { id: 3 }, frameId: 0, origin: 'https://www.amazon.com', url: 'https://www.amazon.com/your-orders/orders' };
 
-  it('hears only the top frame of the tab the read started in, on Amazon', () => {
-    expect(D.isReaderSender(reading, amazonTab)).toBe(true);
-    expect(D.isReaderSender(reading, { ...amazonTab, tab: { id: 4 } })).toBe(false);
-    expect(D.isReaderSender(reading, { ...amazonTab, frameId: 1 })).toBe(false);
-    expect(D.isReaderSender(reading, { ...amazonTab, origin: 'https://smile.amazon.com' })).toBe(false);
-    expect(D.isReaderSender({ ...reading, phase: 'ready' }, amazonTab)).toBe(false);
+  it('hears only the current read, from the top frame of its tab, on Amazon', () => {
+    expect(D.isReaderSender(reading, amazonTab, 'r-2')).toBe(true);
+    expect(D.isReaderSender(reading, amazonTab, 'r-1')).toBe(false);
+    expect(D.isReaderSender(reading, amazonTab, undefined)).toBe(false);
+    expect(D.isReaderSender(reading, { ...amazonTab, tab: { id: 4 } }, 'r-2')).toBe(false);
+    expect(D.isReaderSender(reading, { ...amazonTab, frameId: 1 }, 'r-2')).toBe(false);
+    expect(D.isReaderSender(reading, { ...amazonTab, origin: 'https://smile.amazon.com' }, 'r-2')).toBe(false);
+    expect(D.isReaderSender({ ...reading, phase: 'ready' }, amazonTab, 'r-2')).toBe(false);
+  });
+});
+
+describe('rangeFor', () => {
+  it('knows the four ranges and nothing else', () => {
+    expect(D.rangeFor('months-3')).toEqual({ label: 'Last 3 months', days: 91 });
+    expect(D.rangeFor('constructor')).toBeNull();
+    expect(D.rangeFor('toString')).toBeNull();
+    expect(D.rangeFor(undefined)).toBeNull();
   });
 });
 

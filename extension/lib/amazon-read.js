@@ -155,7 +155,7 @@
       }
       onProgress({ stage: 'payments', count: transactions.length });
       if (reachedStart || !page.next) break;
-      if (paymentPages >= limits.paymentPages) {
+      if (page.next.kind === 'missing' || paymentPages >= limits.paymentPages) {
         paymentsCut = true;
         break;
       }
@@ -164,7 +164,8 @@
       if (!page) throw new ReadError('layout');
     }
 
-    // 2 and 3. Orders. A stop here keeps the payments and what was found.
+    // 2 and 3. Orders. A stop here, for any reason but Stop, keeps the
+    // payments and what was found.
     const needed = new Set(transactions.map((t) => t.orderNumber).filter(Boolean));
     const orders = new Map();
     let stopped = null;
@@ -172,8 +173,8 @@
       await findInOrderHistory();
       await findInOrderDetails();
     } catch (e) {
-      if (!(e instanceof ReadError) || e.code === 'cancelled') throw e;
-      stopped = e.code;
+      if (e instanceof ReadError && e.code === 'cancelled') throw e;
+      stopped = (e instanceof ReadError && e.code) || 'layout';
     }
 
     async function findInOrderHistory() {
@@ -225,7 +226,9 @@
         payments: transactions.length,
         paymentsCut,
         ordersNeeded: needed.size,
-        ordersFound: orders.size,
+        // Orders found with product names. A store purchase is found but has
+        // none, and its details page has none either, so it is not looked up.
+        ordersFound: Array.from(orders.values()).filter((o) => o.items.length).length,
         stopped,
       },
     };

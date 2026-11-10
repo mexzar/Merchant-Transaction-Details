@@ -3,6 +3,10 @@
  * background worker for the export and hands it to the page (lib/handoff.js).
  * Anywhere else, for instance when the user opened the import page
  * themselves, the background has nothing for it and it does nothing.
+ *
+ * Before posting, it asks the background again, and it stops when the
+ * background says the delivery was cancelled: Cancel in the popup wins up
+ * to the moment the export is posted.
  */
 (async function () {
   'use strict';
@@ -19,12 +23,22 @@
     return;
   }
   if (!claim || typeof claim.payload !== 'string' || typeof claim.deliveryId !== 'string') return;
+  const { deliveryId } = claim;
+
+  const stop = new AbortController();
+  chrome.runtime.onMessage.addListener((msg, sender) => {
+    if (sender.id === chrome.runtime.id && !sender.tab && msg && msg.type === 'delivery-cancel') {
+      if (msg.deliveryId === deliveryId) stop.abort();
+    }
+  });
 
   const outcome = await handoff.deliver({
     self: { window, origin: location.origin },
     payload: claim.payload,
+    signal: stop.signal,
+    stillWanted: () =>
+      chrome.runtime.sendMessage({ type: 'delivery-wanted', deliveryId }).then((wanted) => wanted === true),
   });
-  chrome.runtime
-    .sendMessage({ type: 'delivery-result', deliveryId: claim.deliveryId, outcome })
-    .catch(() => {});
+  if (outcome === 'cancelled') return;
+  chrome.runtime.sendMessage({ type: 'delivery-result', deliveryId, outcome }).catch(() => {});
 })();

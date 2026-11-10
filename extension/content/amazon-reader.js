@@ -3,6 +3,9 @@
  * purchases" (and only then: the extension has no standing access to
  * Amazon). Reads as that tab, with the user's own session, builds the export
  * and gives it to the background worker. Nothing is sent anywhere else.
+ *
+ * Every read carries the id the background gave it, on every report, so a
+ * read that was stopped can never speak for the one that replaced it.
  */
 (function () {
   'use strict';
@@ -10,13 +13,13 @@
   // Injected again into a tab that already has it: the first copy answers.
   if (MTD.reader) return;
 
-  let running = false;
-  let cancelled = false;
+  let current = null; // { readId, cancelled }
 
-  chrome.runtime.onMessage.addListener((msg, sender) => {
-    if (sender.id === chrome.runtime.id && !sender.tab && msg && msg.type === 'read-cancel') {
-      cancelled = true;
-    }
+  chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+    if (sender.id !== chrome.runtime.id || sender.tab || !msg) return false;
+    if (msg.type === 'read-cancel' && current && current.readId === msg.readId) current.cancelled = true;
+    if (msg.type === 'read-ping') respond(!!current && current.readId === msg.readId && !current.cancelled);
+    return false;
   });
 
   function localDay(now) {
@@ -40,13 +43,14 @@
     return { status: res.status, url: res.url, text: await res.text() };
   }
 
-  async function start({ rangeKey }) {
-    if (running) return;
-    running = true;
-    cancelled = false;
-    const report = (msg) => chrome.runtime.sendMessage(msg).catch(() => {});
+  /** Start a read. One that is still stopping is told to stop and left to finish quietly. */
+  async function start({ rangeKey, readId }) {
+    if (current) current.cancelled = true;
+    const run = { readId, cancelled: false };
+    current = run;
+    const report = (msg) => chrome.runtime.sendMessage({ ...msg, readId }).catch(() => {});
     try {
-      const range = MTD.delivery.RANGES[rangeKey];
+      const range = MTD.delivery.rangeFor(rangeKey);
       if (location.origin !== MTD.delivery.AMAZON_ORIGIN || !range) {
         throw new MTD.amazonRead.ReadError('not-amazon');
       }
@@ -57,9 +61,12 @@
         today: localDay(now),
         days: range.days,
         sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-        onProgress: (progress) => report({ type: 'read-progress', progress }),
-        isCancelled: () => cancelled,
+        onProgress: (progress) => {
+          if (!run.cancelled) report({ type: 'read-progress', progress });
+        },
+        isCancelled: () => run.cancelled,
       });
+      if (run.cancelled) return;
       const file = MTD.format.buildExport({
         transactions: result.transactions,
         orders: result.orders,
@@ -72,9 +79,11 @@
         summary: { count: file.transaction_count, rangeLabel: range.label, ...result.stats },
       });
     } catch (e) {
-      if (!(e && e.code === 'cancelled')) await report({ type: 'read-failed', code: (e && e.code) || 'layout' });
+      if (!run.cancelled && !(e && e.code === 'cancelled')) {
+        await report({ type: 'read-failed', code: (e && e.code) || 'layout' });
+      }
     } finally {
-      running = false;
+      if (current === run) current = null;
     }
   }
 

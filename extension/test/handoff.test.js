@@ -92,6 +92,49 @@ describe('deliver', () => {
     expect(page.heard.map((h) => h.data.type)).toEqual(['hello', 'deliver', 'hello', 'deliver', 'hello']);
   });
 
+  it('posts nothing once the delivery is no longer wanted', async () => {
+    const page = fakePage();
+    const outcome = deliver({ self: { window: page.win, origin: ORIGIN }, payload: '{}', stillWanted: async () => false });
+    await vi.runAllTimersAsync();
+    await expect(outcome).resolves.toBe('cancelled');
+    expect(page.heard.map((h) => h.data.type)).toEqual(['hello']);
+  });
+
+  it('treats a failed "still wanted?" question as no', async () => {
+    const page = fakePage();
+    const outcome = deliver({
+      self: { window: page.win, origin: ORIGIN },
+      payload: '{}',
+      stillWanted: () => Promise.reject(new Error('extension reloaded')),
+    });
+    await vi.runAllTimersAsync();
+    await expect(outcome).resolves.toBe('cancelled');
+    expect(page.heard.some((h) => h.data.type === 'deliver')).toBe(false);
+  });
+
+  it('stops saying hello when cancelled, and never delivers after', async () => {
+    const page = fakePage({ answersHello: false });
+    const stop = new AbortController();
+    const outcome = deliver({ self: { window: page.win, origin: ORIGIN }, payload: '{}', signal: stop.signal });
+    await vi.advanceTimersByTimeAsync(2500);
+    stop.abort();
+    page.reply(envelope('ready'));
+    await vi.runAllTimersAsync();
+    await expect(outcome).resolves.toBe('cancelled');
+    expect(page.heard.map((h) => h.data.type)).toEqual(['hello', 'hello', 'hello']);
+  });
+
+  it('takes a late received as received', async () => {
+    const page = fakePage({ answersHello: false, takesDeliveries: false });
+    const outcome = deliver({ self: { window: page.win, origin: ORIGIN }, payload: '{}' });
+    page.reply(envelope('ready'));
+    await vi.advanceTimersByTimeAsync(5500);
+    expect(page.heard.map((h) => h.data.type)).toEqual(['hello', 'deliver', 'hello']);
+    page.reply(envelope('received'));
+    await vi.runAllTimersAsync();
+    await expect(outcome).resolves.toBe('received');
+  });
+
   it('ignores a ready or received from anywhere else', async () => {
     const page = fakePage({ answersHello: false });
     const outcome = deliver({ self: { window: page.win, origin: ORIGIN }, payload: '{}', maxHellos: 3 });

@@ -11,10 +11,16 @@ importScripts('lib/delivery.js');
 const D = self.MTD.delivery;
 const KEY = 'state';
 const TEST_SCRIPT_ID = 'piggybanks-test-site';
+// How long after a read starts before a reader that does not answer counts
+// as gone (the popup may still be injecting it).
+const READER_GRACE_MS = 5000;
+// How long after the Amazon tab starts loading a page to check the reader:
+// a real navigation has removed it by then; an in-page one has not.
+const NAVIGATION_CHECK_MS = 1500;
 
 let queue = Promise.resolve();
 
-/** Run `change` on the current state, one change at a time, and save its result. */
+/** Run `change` on the current state, one change at a time, and save it. */
 function update(change) {
   const run = queue.then(async () => {
     const stored = await chrome.storage.session.get(KEY);
@@ -29,6 +35,10 @@ function update(change) {
 
 function fromPopup(sender) {
   return sender.id === chrome.runtime.id && sender.url === chrome.runtime.getURL('popup/popup.html');
+}
+
+function tell(tabId, msg) {
+  return chrome.tabs.sendMessage(tabId, msg, { frameId: 0 });
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {
@@ -46,15 +56,15 @@ async function handle(msg, sender) {
     case 'read-begin':
       if (!fromPopup(sender)) return null;
       return update((s) => {
-        if (s.phase === 'reading' || s.phase === 'sending') return false;
-        if (!D.RANGES[msg.rangeKey] || !Number.isInteger(msg.tabId)) return false;
-        Object.assign(s, D.initialState(), {
-          phase: 'reading',
-          read: { tabId: msg.tabId, rangeKey: msg.rangeKey, startedAt: Date.now() },
-          progress: { stage: 'payments', count: 0 },
-        });
-        return true;
+        if (s.phase === 'reading' || s.phase === 'sending') return null;
+        if (!D.rangeFor(msg.rangeKey) || !Number.isInteger(msg.tabId)) return null;
+        const read = { id: crypto.randomUUID(), tabId: msg.tabId, rangeKey: msg.rangeKey, startedAt: Date.now() };
+        Object.assign(s, D.initialState(), { phase: 'reading', read, progress: { stage: 'payments', count: 0 } });
+        return { readId: read.id };
       });
+    case 'check-read':
+      if (!fromPopup(sender)) return null;
+      return checkReader(READER_GRACE_MS);
     case 'send':
       if (!fromPopup(sender)) return null;
       return startDelivery();
@@ -62,11 +72,11 @@ async function handle(msg, sender) {
       if (!fromPopup(sender)) return null;
       return update((s) => {
         if (s.phase === 'reading') {
-          if (s.read) chrome.tabs.sendMessage(s.read.tabId, { type: 'read-cancel' }).catch(() => {});
+          if (s.read) tell(s.read.tabId, { type: 'read-cancel', readId: s.read.id }).catch(() => {});
           Object.assign(s, D.initialState());
         } else if (s.phase === 'sending') {
+          cancelDelivery(s);
           s.phase = 'ready';
-          s.delivery = null;
         }
       });
     case 'discard':
@@ -81,7 +91,7 @@ async function handle(msg, sender) {
     case 'read-done':
     case 'read-failed':
       return update((s) => {
-        if (!D.isReaderSender(s, sender)) return;
+        if (!D.isReaderSender(s, sender, msg.readId)) return;
         if (msg.type === 'read-progress') {
           s.progress = msg.progress;
         } else if (msg.type === 'read-failed') {
@@ -100,15 +110,16 @@ async function handle(msg, sender) {
     // From the import page's content script.
     case 'claim-delivery':
       return update((s) => D.claim(s, sender, Date.now()));
+    case 'delivery-wanted':
+      return update((s) => D.stillWanted(s, sender, msg.deliveryId, Date.now()));
     case 'delivery-result':
       return update((s) => {
-        if (!s.delivery || msg.deliveryId !== s.delivery.id || !D.claim(s, sender, Date.now())) return;
+        if (!D.stillWanted(s, sender, msg.deliveryId, Date.now())) return;
+        s.delivery = null;
         if (msg.outcome === 'received') {
           s.phase = 'sent';
-          s.exportText = null;
-          s.delivery = null;
           s.notice = null;
-        } else {
+        } else if (msg.outcome === 'unreachable') {
           s.phase = 'ready';
           s.notice = 'unreachable';
         }
@@ -118,30 +129,59 @@ async function handle(msg, sender) {
   }
 }
 
-/** Open the import page (in the tab used last time, if it is still open) and wait for it to ask. */
+/** Tell the import page's content script to stop, and forget the delivery. */
+function cancelDelivery(s) {
+  if (s.delivery) tell(s.delivery.tabId, { type: 'delivery-cancel', deliveryId: s.delivery.id }).catch(() => {});
+  s.delivery = null;
+}
+
+/**
+ * Open the import page in a new tab and wait for it to ask. Always a new
+ * tab: an earlier one may since be showing something else.
+ */
 async function startDelivery() {
-  const { target } = await chrome.storage.local.get('target');
-  const testAllowed = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
-  const site = target === 'test' && testAllowed ? 'test' : 'production';
-  const url = D.importUrl(site);
+  const toTest = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
+  const site = toTest ? 'test' : 'production';
   return update(async (s) => {
-    if (s.phase !== 'ready' || !s.exportText) return false;
-    let tabId = s.delivery && s.delivery.tabId;
-    if (tabId === undefined || tabId === null) tabId = s.lastDeliveryTabId;
-    let tab = null;
-    if (Number.isInteger(tabId)) {
-      tab = await chrome.tabs.update(tabId, { url, active: true }).catch(() => null);
-    }
-    if (!tab) tab = await chrome.tabs.create({ url, active: true });
+    if (!['ready', 'sending', 'sent'].includes(s.phase) || !s.exportText) return false;
+    cancelDelivery(s);
+    const tab = await chrome.tabs.create({ url: D.importUrl(site), active: true });
     s.phase = 'sending';
     s.notice = null;
-    s.lastDeliveryTabId = tab.id;
     s.delivery = { id: crypto.randomUUID(), tabId: tab.id, startedAt: Date.now(), target: site };
     return true;
   });
 }
 
-// A read whose tab closes, or navigates away, can never finish.
+/**
+ * If the current read's reader no longer answers (its tab left the page),
+ * the read failed. `graceMs` spares a read that may still be being injected.
+ */
+async function checkReader(graceMs) {
+  const { [KEY]: s } = await chrome.storage.session.get(KEY);
+  if (!s || s.phase !== 'reading' || !s.read || Date.now() - s.read.startedAt < graceMs) return;
+  const { id, tabId } = s.read;
+  const alive = await tell(tabId, { type: 'read-ping', readId: id }).then(
+    (answer) => answer === true,
+    () => false,
+  );
+  if (alive) return;
+  await update((now) => {
+    if (now.phase === 'reading' && now.read && now.read.id === id) {
+      Object.assign(now, D.initialState(), { phase: 'failed', error: 'tab-left' });
+    }
+  });
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status !== 'loading') return;
+  chrome.storage.session.get(KEY).then(({ [KEY]: s }) => {
+    if (s && s.phase === 'reading' && s.read && s.read.tabId === tabId) {
+      setTimeout(() => checkReader(0).catch(() => {}), NAVIGATION_CHECK_MS);
+    }
+  });
+});
+
 chrome.tabs.onRemoved.addListener((tabId) => {
   update((s) => {
     if (s.phase === 'reading' && s.read && s.read.tabId === tabId) {
@@ -156,7 +196,8 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 // The test site is opt-in (Settings in the popup): its permission is
-// optional, and its content script is registered only while it is granted.
+// optional, its content script is registered only while it is granted, and
+// while it is granted, Send goes there.
 async function syncTestSiteScript() {
   const granted = await chrome.permissions.contains({ origins: [`${D.TEST_ORIGIN}/*`] });
   const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [TEST_SCRIPT_ID] });

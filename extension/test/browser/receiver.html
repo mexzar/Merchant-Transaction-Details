@@ -12,12 +12,14 @@
       // `hello` with `ready`, take a `deliver` with `received` before
       // importing, honour only this window on this origin, and announce
       // `ready` on mount. It records what it took for the test to read.
+      // With ?hold in the address it stays silent until the test calls
+      // window.__release(), like a page still signing in.
       const CHANNEL = 'piggybanks.merchant-details';
       const env = (type) => ({ channel: CHANNEL, version: 1, type });
       const post = (type) => window.postMessage(env(type), window.location.origin);
       window.__taken = [];
       window.__heard = [];
-      setTimeout(() => {
+      function mount() {
         window.addEventListener('message', (event) => {
           if (event.origin !== window.location.origin || event.source !== window) return;
           const d = event.data;
@@ -32,7 +34,9 @@
         });
         document.getElementById('status').textContent = 'Ready';
         post('ready');
-      }, 400);
+      }
+      if (new URLSearchParams(location.search).has('hold')) window.__release = mount;
+      else setTimeout(mount, 400);
     </script>
   </body>
 </html>

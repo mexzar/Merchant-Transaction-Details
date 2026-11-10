@@ -28,13 +28,15 @@ arrow on the extension's card.
    amazon.com, signed in.
 2. Click the extension's button. Pick how far back to read (last 30 days, 3,
    6 or 12 months) and click **Read my Amazon purchases**. It takes a minute
-   or so; you can keep using the browser.
+   or two, a few minutes for 12 months. Leave that tab on its page until it
+   is done; other tabs are fine.
 3. Click **Send to Piggy Banks**. The import page opens in a new tab and adds
    the products to your transactions. It shows how many it updated.
-   - Not signed in to Piggy Banks? Sign in in that tab, then click **Send**
-     again.
+   - Not signed in to Piggy Banks? Sign in in that tab, then click **Send
+     again**.
    - **Save as a file** keeps a copy you can upload on the import page
      yourself.
+4. Click **Done** to clear the purchases from the extension.
 
 Sending the same purchases twice changes nothing the second time.
 
@@ -46,13 +48,19 @@ Sending the same purchases twice changes nothing the second time.
   for instance), that order's details page. One request at a time, a second
   apart, at most about 165 pages in one read.
 - **It stops** at any sign-in page, CAPTCHA or "is it you?" check, and tells
-  you. It never answers one; you do, in the tab.
-- **It keeps** the result in the browser's memory until Piggy Banks takes it.
-  Closing the browser clears it.
+  you. It never answers one. Those pages come back to the extension, not to
+  your screen, so reload the Amazon tab, do what Amazon asks, then read again.
+- **It keeps** the result in the browser's memory until you click **Done**
+  or **Discard**, so you can send it again if the import page could not load
+  your account. Closing the browser clears it.
 - **It sends** the result only to the Piggy Banks import page it opened
-  (piggybanksonline.com), and only after you click **Send**. Piggy Banks
-  answers only "ready" and "received". Nothing else leaves your browser: no
-  analytics, no servers of ours, no code loaded from anywhere.
+  (piggybanksonline.com), and only after you click **Send**. **Cancel** stops
+  it up to the moment it is handed over. If that tab is reloaded before
+  Piggy Banks confirms, it is handed over again, which adds nothing new.
+  Piggy Banks answers only "ready" and "received". Any script running on the
+  import page can read what is handed over, as it can read the rest of that
+  page. Nothing else leaves your browser: no analytics, no servers of ours, no
+  code loaded from anywhere.
 
 For each charge or refund the file holds the date, the amount and a
 description:
@@ -63,24 +71,29 @@ Crayola Dry Erase Marker
 ```
 
 One product per line, cut to 60 characters, then the order number. A refund
-starts with "Return of". When the products cannot be read (Whole Foods,
-Amazon Fresh and in-store purchases), the description is the order number
-alone. A long order lists its first products and how many more.
+starts with "Return of". A long order lists its first products and how many
+more. When the products cannot be read (Whole Foods, Amazon Fresh and
+in-store purchases, for instance), the description is the name Amazon shows
+for the charge ("Prime Video Channels"), or the order number alone when that
+name is a generic one like "AMZN Mktp US". Anything that looks like a payment
+card is never used.
 
 ## Permissions
 
 | Permission | Why |
 |---|---|
 | Read the tab you click in (`activeTab`, `scripting`) | To read Amazon in that tab. Only when you click the button, only that tab, and not after it leaves the page. The extension has no standing access to Amazon. |
-| Storage (`storage`) | To keep the result in memory until Piggy Banks takes it, and your Settings choice. |
-| piggybanksonline.com import page | To hand the result to the import page in the tab **Send** opened. Nothing runs on the rest of Piggy Banks. |
-| Piggy Banks test site (optional) | Only if you turn on **Send to the Piggy Banks test site** in Settings. Your browser asks first. |
+| Storage (`storage`) | To keep the result in memory until you click Done. |
+| piggybanksonline.com | To hand the result to the import page in the tab **Send** opened. Chrome describes this as access to piggybanksonline.com; the extension's script runs only on the import page, and does nothing there unless **Send** opened it. |
+| Piggy Banks test site (optional) | Only if you turn on **Send to the Piggy Banks test site** in Settings. Your browser asks first. While it is on, **Send** goes to the test site; turn it off to send to piggybanksonline.com. |
 
 ## Limits
 
-- amazon.com in English. Other Amazon sites are not read.
-- Up to 25 order details pages per read; past that, a purchase keeps just its
-  order number.
+- amazon.com, with the account set to English. Other Amazon sites, and
+  accounts in another language, are not read: the extension says it could
+  not read them.
+- Up to 25 order details pages per read; past that, a purchase is described
+  as when its products cannot be read.
 - Amazon changes its pages. When it does, the extension says it could not
   read them rather than guessing.
 
