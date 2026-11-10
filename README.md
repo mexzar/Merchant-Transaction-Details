@@ -6,13 +6,18 @@ only for the download and are **never written to disk**.
 
 ## Browser extension
 
+**[Download the browser extension (ZIP)](https://github.com/mexzar/Merchant-Transaction-Details/releases/latest/download/merchant-transaction-details.zip)**
+
 There is also a browser extension in [`extension/`](extension/README.md). It
 reads the same data from the Amazon tab you are already signed in to, so
 there is no password to type and nothing else to install. It can hand the
-result straight to your Piggy Banks import page, or save the same JSON file
-this app writes. Chrome, Edge, Brave and other Chromium browsers. See
-[`extension/README.md`](extension/README.md) to install it, and
-[`extension/PRIVACY.md`](extension/PRIVACY.md) for what it keeps.
+result straight to your Piggy Banks import page, or save it in the same JSON
+format this app writes. Chrome, Edge, Brave and other Chromium browsers.
+
+To install it: unzip the download, open `chrome://extensions` (Edge:
+`edge://extensions`), turn on **Developer mode**, click **Load unpacked** and
+pick the unzipped folder. More in [`extension/README.md`](extension/README.md),
+and [`extension/PRIVACY.md`](extension/PRIVACY.md) says what it keeps.
 
 The desktop app below stays available and writes the same file.
 

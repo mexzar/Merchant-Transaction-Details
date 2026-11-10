@@ -14,15 +14,20 @@ import page yourself.
 
 Chrome, Edge, Brave and other Chromium browsers, version 116 or newer.
 
-1. Download this repository (green **Code** button → **Download ZIP**) and
-   unpack it.
+1. **[Download the extension (ZIP)](https://github.com/mexzar/Merchant-Transaction-Details/releases/latest/download/merchant-transaction-details.zip)**
+   from the latest release, and unzip it. Keep the folder somewhere it can
+   stay: the browser loads the extension from it.
 2. Open `chrome://extensions` (Edge: `edge://extensions`).
 3. Turn on **Developer mode**.
-4. Click **Load unpacked** and pick the `extension` folder.
+4. Click **Load unpacked** and pick the unzipped folder (the one holding
+   `manifest.json`).
 5. Pin **Merchant Transaction Details** to the toolbar so it is easy to find.
 
-To update, replace the folder with a newer download and click the reload
-arrow on the extension's card.
+Each [release](https://github.com/mexzar/Merchant-Transaction-Details/releases)
+lists the ZIP's SHA-256, if you want to check your download. To update,
+replace the folder's contents with a newer download and click the reload
+arrow on the extension's card. A clone of this repository works too: load
+its `extension` folder.
 
 ## Use
 
@@ -117,9 +122,15 @@ cd extension
 npm install
 npm test               # unit tests (format, Amazon pages, reading, handoff, delivery rules)
 npm run test:browser   # the extension in a real Chromium, offline, against made-up pages
-npm run package        # dist/merchant-transaction-details-<version>.zip
+npm run package        # dist/merchant-transaction-details.zip
 npm run icons          # redraw icons/
 ```
+
+To publish a new version: raise `version` in `manifest.json`, run `npm run
+package`, and create a GitHub release tagged `extension-v<version>` with
+`dist/merchant-transaction-details.zip` attached under that exact name and
+its SHA-256 (`shasum -a 256`) in the notes. The download link above always
+points at the newest release's file of that name.
 
 The browser test needs Playwright's Chromium (`npx playwright install
 chromium` once). Every page in the tests is made up; no request leaves the
