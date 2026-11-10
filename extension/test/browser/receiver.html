@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Import details (test stand-in)</title>
+  </head>
+  <body>
+    <p id="status">Booting</p>
+    <script>
+      // A stand-in for the Piggy Banks import page's half of the handoff, as
+      // Specs/MERCHANT_DETAILS_IMPORT.md in Piggy Banks describes it: answer
+      // `hello` with `ready`, take a `deliver` with `received` before
+      // importing, honour only this window on this origin, and announce
+      // `ready` on mount. It records what it took for the test to read.
+      const CHANNEL = 'piggybanks.merchant-details';
+      const env = (type) => ({ channel: CHANNEL, version: 1, type });
+      const post = (type) => window.postMessage(env(type), window.location.origin);
+      window.__taken = [];
+      window.__heard = [];
+      setTimeout(() => {
+        window.addEventListener('message', (event) => {
+          if (event.origin !== window.location.origin || event.source !== window) return;
+          const d = event.data;
+          if (!d || d.channel !== CHANNEL || d.version !== 1) return;
+          window.__heard.push(d.type);
+          if (d.type === 'hello') post('ready');
+          if (d.type === 'deliver' && typeof d.payload === 'string') {
+            post('received');
+            window.__taken.push(d.payload);
+            document.getElementById('status').textContent = 'Imported';
+          }
+        });
+        document.getElementById('status').textContent = 'Ready';
+        post('ready');
+      }, 400);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "merchant-transaction-details-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser extension: reads your Amazon purchases in your own tab and hands them to Piggy Banks.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:browser": "node test/browser/run.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "29.0.2",
+    "playwright": "1.58.2",
+    "vitest": "4.1.4"
+  }
+}
