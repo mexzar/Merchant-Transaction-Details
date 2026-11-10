@@ -1,0 +1,21 @@
+{
+  "type": "GetTransactions",
+  "responseCode": "OK",
+  "displayResponse": {
+    "transactionsList": [
+      {
+        "formattedAmount": "-$1,204.50",
+        "formattedDate": "Sep 2, 2026",
+        "orderData": [{ "orderDisplayString": "Order #111-0000000-0000004" }],
+        "statementDescriptor": "Amazon.com"
+      },
+      {
+        "formattedAmount": "-$3.00",
+        "formattedDate": "Jun 1, 2026",
+        "orderData": [{ "orderDisplayString": "Order #111-0000000-0000009" }],
+        "statementDescriptor": "AMZN Mktp US"
+      }
+    ],
+    "lastEvaluatedKey": "page-key-2"
+  }
+}

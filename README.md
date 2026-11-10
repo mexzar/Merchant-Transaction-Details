@@ -4,6 +4,18 @@ Download your Amazon orders and transactions to a tidy JSON file, through a
 local web app on your Mac or Windows PC. Credentials and MFA codes are used
 only for the download and are **never written to disk**.
 
+## Browser extension
+
+There is also a browser extension in [`extension/`](extension/README.md). It
+reads the same data from the Amazon tab you are already signed in to, so
+there is no password to type and nothing else to install. It can hand the
+result straight to your Piggy Banks import page, or save the same JSON file
+this app writes. Chrome, Edge, Brave and other Chromium browsers. See
+[`extension/README.md`](extension/README.md) to install it, and
+[`extension/PRIVACY.md`](extension/PRIVACY.md) for what it keeps.
+
+The desktop app below stays available and writes the same file.
+
 ## Install
 
 **No administrator rights and no separate Python install needed** — download the
@@ -106,6 +118,9 @@ store via the [`keyring`](https://github.com/jaraco/keyring) library —
 - `description` lists one product per line, `"[Return of ]Product A\nProduct B\n… - order <number>"`
   (the trailing `- order <number>` rides the last product line). Product names
   are truncated to 60 characters at word boundaries.
+- The extension writes the same shape without `account` (it never sees your
+  sign-in email), and keeps each description within 400 characters, the most
+  Piggy Banks keeps, by listing the first products and "+N more".
 
 ## Project layout
 
@@ -129,6 +144,7 @@ update.bat             one-click updater (Windows)
 launch.bat             one-click launcher (Windows)
 notepad/               research notes (library decision) in JSON
 tests/                 smoke tests
+extension/             the browser extension (its own README, tests and package)
 ```
 
 ## Development

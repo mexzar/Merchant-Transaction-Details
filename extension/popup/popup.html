@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Merchant Transaction Details</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Merchant Transaction Details</h1>
+      <p class="sub">Your Amazon purchases, for your Piggy Banks notes.</p>
+    </header>
+
+    <main>
+      <section id="open-amazon" hidden>
+        <p>Open Your Orders on amazon.com and sign in. Then click this button again.</p>
+        <button id="open-amazon-button" class="primary">Open Your Orders</button>
+      </section>
+
+      <section id="start" hidden>
+        <label for="range">Read purchases from</label>
+        <select id="range">
+          <option value="last30">Last 30 days</option>
+          <option value="months-3" selected>Last 3 months</option>
+          <option value="months-6">Last 6 months</option>
+          <option value="months-12">Last 12 months</option>
+        </select>
+        <button id="read-button" class="primary">Read my Amazon purchases</button>
+        <p class="hint">
+          Reads Your Payments and Your Orders in this tab, one page at a time. Leave the tab on this page
+          until it's done: a minute or two, a few minutes for 12 months.
+        </p>
+      </section>
+
+      <section id="reading" hidden>
+        <p id="progress" role="status" aria-live="polite"></p>
+        <button id="stop-button">Stop</button>
+      </section>
+
+      <section id="ready" hidden>
+        <p id="summary"></p>
+        <ul id="caveats"></ul>
+        <p id="notice" class="notice" role="alert" hidden></p>
+        <button id="send-button" class="primary">Send to Piggy Banks</button>
+        <div class="row">
+          <button id="save-button">Save as a file</button>
+          <button id="discard-button">Discard</button>
+        </div>
+      </section>
+
+      <section id="sending" hidden>
+        <p role="status">Sending to Piggy Banks in the tab that just opened.</p>
+        <p class="hint">Asked to sign in? Sign in in that tab, then click Send again.</p>
+        <div class="row">
+          <button id="resend-button">Send again</button>
+          <button id="cancel-send-button">Cancel</button>
+        </div>
+      </section>
+
+      <section id="sent" hidden>
+        <p role="status">Sent to Piggy Banks. The import page shows what it added.</p>
+        <p class="hint">If the page said it couldn't load your account, click Send again.</p>
+        <button id="done-button" class="primary">Done</button>
+        <button id="send-again-button">Send again</button>
+      </section>
+
+      <section id="failed" hidden>
+        <p id="error" class="notice" role="alert"></p>
+        <button id="retry-button" class="primary">Start over</button>
+      </section>
+    </main>
+
+    <footer>
+      <p class="privacy">
+        Your purchases stay in this browser's memory until you click Done or Discard, and go only to the
+        Piggy Banks page you send them to. Closing the browser clears them.
+      </p>
+    </footer>
+
+    <script src="../lib/delivery.js"></script>
+    <script src="../lib/format.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Merchant Transaction Details",
+  "short_name": "Merchant Details",
+  "version": "0.1.0",
+  "description": "Reads your Amazon purchases in your own signed-in tab and hands them to your Piggy Banks import page.",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Merchant Transaction Details",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://piggybanksonline.com/import-details*"],
+      "js": ["lib/handoff.js", "content/piggybanks.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
